@@ -3,42 +3,31 @@ import { routeMockQuery } from "../mockData";
 
 export const dynamic = "force-dynamic";
 
+// Demo mode is the default: every answer comes from the mock engine.
+// Set USE_BACKEND=true (with API_URL) to forward to the FastAPI pipeline instead.
+const USE_BACKEND = process.env.USE_BACKEND === "true";
+
 export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json().catch(() => ({}));
-    const message = body.message || "";
+  const body = await req.json().catch(() => ({}));
+  const message: string = body.message || "";
 
-    const backendUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
-
-    // If backend URL is provided and not pointing to localhost, try forwarding
-    if (backendUrl && !backendUrl.includes("localhost") && !backendUrl.includes("127.0.0.1")) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
-
-        const upstreamRes = await fetch(`${backendUrl}/api/chat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-          signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
-
-        if (upstreamRes.ok) {
-          const upstreamData = await upstreamRes.json();
-          return NextResponse.json(upstreamData);
-        }
-      } catch (upstreamErr) {
-        console.warn("Backend proxy failed, falling back to smart demo mock engine:", upstreamErr);
-      }
+  const backendUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
+  if (USE_BACKEND && backendUrl) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const upstream = await fetch(`${backendUrl}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (upstream.ok) return NextResponse.json(await upstream.json());
+    } catch (err) {
+      console.warn("Backend proxy failed, using demo data:", err);
     }
-
-    // Default standalone demo mode on Vercel
-    const mockResponse = routeMockQuery(message);
-    return NextResponse.json(mockResponse);
-  } catch (error: any) {
-    console.error("API Chat route error:", error);
-    const fallback = routeMockQuery("Plan a 3-day trip to Da Nang next week");
-    return NextResponse.json(fallback);
   }
+
+  return NextResponse.json(routeMockQuery(message));
 }

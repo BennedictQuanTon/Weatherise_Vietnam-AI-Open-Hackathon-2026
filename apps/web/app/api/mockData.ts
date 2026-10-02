@@ -1,181 +1,41 @@
-export interface LocationPoint {
-  name: string;
-  latitude: number;
-  longitude: number;
-}
+// Demo engine — one mock report per showcase question.
+// All numbers come from lib/report/demoWeek.ts; checks are computed, not typed in.
 
-export interface MapMarker {
-  id: string;
-  label: string;
-  latitude: number;
-  longitude: number;
-  title?: string;
-  description?: string;
-  order?: number;
-  category?: string;
-  temperature_c?: number;
-  weather_condition?: string;
-  rain_probability?: number;
-  is_indoor?: boolean;
-}
-
-export interface TripViewStop {
-  order: number;
-  time: string;
-  time_block: "morning" | "lunch" | "afternoon" | "dinner" | "evening";
-  category: "attraction" | "restaurant" | "cafe" | "market" | "beach";
-  name: string;
-  description?: string;
-  latitude: number;
-  longitude: number;
-  forecast_temp_c?: number;
-  rain_probability?: number;
-  weather_condition?: string;
-  is_indoor: boolean;
-  weather_suitability?: "good" | "medium" | "poor";
-}
-
-export interface HourlyForecastItem {
-  time: string;
-  temp_c: number;
-  feels_like_c: number;
-  rain_probability: number;
-  rain_mm: number;
-  wind_kmh: number;
-  humidity_percent: number;
-  condition: string;
-}
-
-export interface TripViewDay {
-  day: number;
-  date?: string;
-  title: string;
-  summary: string;
-  weather: {
-    high_c: number;
-    low_c: number;
-    rain_probability: number;
-    condition: string;
-  };
-  hourly_forecast?: HourlyForecastItem[];
-  stops: TripViewStop[];
-}
-
-export interface TripPlanningView {
-  title: string;
-  date_range: { start?: string; end?: string; label?: string };
-  summary_cards: {
-    avg_high_c: number;
-    avg_low_c: number;
-    avg_wind_kmh: number;
-    humidity_percent: number;
-    rain_risk: string;
-  };
-  ai_summary: string;
-  days: TripViewDay[];
-  map: {
-    markers: MapMarker[];
-  };
-}
-
-export interface DomainMetricItem {
-  label: string;
-  value: string;
-  sub?: string;
-  source?: string;
-  standard?: string;
-  badge?: string;
-  badgeColor?: "emerald" | "amber" | "rose" | "blue" | "purple" | "cyan";
-  iconName?: string;
-}
-
-export interface TechStackInfo {
-  reasoning_model: string;
-  domain_agent: string;
-  weather_sources: string[];
-  vector_db: string;
-  guardrails_score: string;
-  latency: string;
-  tokens_per_sec: string;
-}
-
-export interface HazardEvaluationItem {
-  title: string;
-  standard_code: string;
-  status: string;
-  threshold_limit: string;
-  observed_value: string;
-  impact_description: string;
-  severity: "high" | "medium" | "low";
-}
-
-export interface DomainOverviewData {
-  title: string;
-  subtitle: string;
-  executive_summary: string;
-  compliance_status: string;
-  hazards: HazardEvaluationItem[];
-  operational_protocols: string[];
-}
-
-export interface WeatherPredictionView {
-  title: string;
-  location: LocationPoint;
-  date_range: { start?: string; end?: string; label?: string };
-  assumption: {
-    summary: string;
-    should_go: boolean;
-    decision_label: string;
-    decision_category?: string;
-    key_stat_badge?: string;
-    key_stat_value?: string;
-    reason: string;
-  };
-  statistics: {
-    avg_temperature_c: number;
-    min_temperature_c: number;
-    max_temperature_c: number;
-    avg_wind_kmh: number;
-    total_rainfall_mm: number;
-    rain_risk: string;
-    wind_risk: string;
-    heat_risk: string;
-    overall_risk: string;
-    most_common_condition: string;
-  };
-  domain_metrics?: DomainMetricItem[];
-  tech_stack_info?: TechStackInfo;
-  overview?: DomainOverviewData;
-  daily_forecast: Array<{
-    date: string;
-    day_label: string;
-    condition: string;
-    condition_icon: string;
-    max_temp_c: number;
-    min_temp_c: number;
-    wind_kmh: number;
-    rain_probability: number;
-    rain_mm: number;
-    risk: string;
-  }>;
-  recommendations: string[];
-  alternatives: Array<{
-    name: string;
-    description: string;
-    distance_label?: string;
-    latitude?: number;
-    longitude?: number;
-  }>;
-  map: {
-    center: LocationPoint;
-    markers: MapMarker[];
-  };
-  insights: Array<{
-    title: string;
-    body: string;
-    type: "rain" | "wind" | "heat" | "travel" | "general";
-  }>;
-}
+import type {
+  CalendarDay,
+  Cell,
+  ChartSpec,
+  Report,
+  ReportMarker,
+  TripDay,
+  TripStop,
+} from "@/lib/report/types";
+import {
+  AS_OF,
+  HOURLY,
+  HOURLY_ORDER,
+  MODEL,
+  NB,
+  PIPELINE_BASE,
+  RULES,
+  WEATHER_SOURCES,
+  WEEK,
+  day,
+  firstRainAfter,
+  hh,
+  hourlyPoints,
+  hoursBetween,
+  max,
+  min,
+  range,
+  round,
+  slice,
+  span,
+  sum,
+  unit,
+  type HourlyKey,
+} from "@/lib/report/demoWeek";
+import { SHOWCASE_PROMPTS } from "@/lib/report/prompts";
 
 export interface ChatResult {
   session_id: string;
@@ -183,1101 +43,972 @@ export interface ChatResult {
   response_type: "trip_planning" | "weather_prediction" | "general";
   domain: string;
   location: string;
-  prediction?: string;
-  recommendation?: string;
-  risk_assessment?: {
-    rain_risk?: string;
-    wind_risk?: string;
-    heat_risk?: string;
-    overall_risk?: string;
-    trip_disruption_risk?: string;
-    construction_safety_risk?: string;
-    disease_risk?: string;
-  };
-  explanation?: string;
-  final_answer?: string;
-  trip_plan?: any;
-  error?: string;
   coordinates?: { latitude: number; longitude: number };
-  evidence?: string[];
-  weather_stats?: {
-    avg_temperature_c?: number;
-    min_temperature_c?: number;
-    max_temp?: number;
-    max_rain_prob?: number;
-    max_wind_speed?: number;
-    total_rainfall_mm?: number;
-  };
-  time_range?: { start?: string; end?: string; raw_text?: string };
-  weather_path?: string;
-  weather_confidence?: number;
-  weather_mode?: string;
-  sources_used?: string[];
-  tech_stack_info?: TechStackInfo;
-  weather_view?: WeatherPredictionView;
-  trip_view?: TripPlanningView;
+  report: Report;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 1. TOURISM MOCK DATA (Da Nang 3-Day Weather-Aware Trip)
-// ─────────────────────────────────────────────────────────────────────────────
-export function getTourismMockResponse(query: string): ChatResult {
-  const tech_stack_info: TechStackInfo = {
-    reasoning_model: "DeepSeek-R1-Distill-Llama-70B (NVIDIA NIM CoT)",
-    domain_agent: "Tourism Itinerary Optimizer & POI Weather Solver",
-    weather_sources: ["ERA5 Da Nang Coastal 0.25°", "Open-Meteo HighRes", "Da Nang GIS Vector DB"],
-    vector_db: "Qdrant Hybrid Search (NeMo 1024-d + BM25)",
-    guardrails_score: "99.4% Safety & Grounding Passed",
-    latency: "1.12s",
-    tokens_per_sec: "48.5 tok/s"
-  };
+const pass = (ok: boolean) => (ok ? "Pass" : "Fail");
+const cell = (text: string, ok?: boolean): Cell => ({
+  text,
+  tone: ok === undefined ? "neutral" : ok ? "ok" : "alert",
+});
 
-  const trip_view: TripPlanningView = {
-    title: "Plan for Da Nang next week",
-    date_range: {
-      start: "2026-09-10",
-      end: "2026-09-12",
-      label: "Sep 10 – Sep 12, 2026"
-    },
-    summary_cards: {
-      avg_high_c: 32,
-      avg_low_c: 25,
-      avg_wind_kmh: 14.5,
-      humidity_percent: 74,
-      rain_risk: "Low-Med"
-    },
-    ai_summary:
-      "Weatherise Agent synthesized a 72h high-resolution forecast for Da Nang. Day 1 features clear skies ideal for Son Tra Peninsula & My Khe Beach. Day 2 has an afternoon shower (58% probability from 14:00-16:00), automatically routing indoor cultural venues (Cham Museum & Han Market). Day 3 returns to pleasant mountain conditions at Ba Na Hills.",
-    days: [
-      {
-        day: 1,
-        date: "Thursday, Sep 10",
-        title: "Son Tra Peninsula & My Khe Beach (Clear Skies & Sea Breeze)",
-        summary: "Explore cool morning breeze at Son Tra (26°C), enjoy beach swimming in the afternoon, and watch the Dragon Bridge fire show.",
-        weather: {
-          high_c: 32,
-          low_c: 25,
-          rain_probability: 12,
-          condition: "Sunny & Gentle Breeze"
-        },
-        hourly_forecast: [
-          { time: "06:00", temp_c: 25, feels_like_c: 26, rain_probability: 5, rain_mm: 0.0, wind_kmh: 12, humidity_percent: 82, condition: "Clear Sky" },
-          { time: "08:00", temp_c: 27, feels_like_c: 29, rain_probability: 5, rain_mm: 0.0, wind_kmh: 14, humidity_percent: 78, condition: "Sunny" },
-          { time: "10:00", temp_c: 30, feels_like_c: 33, rain_probability: 10, rain_mm: 0.0, wind_kmh: 16, humidity_percent: 72, condition: "Sunny" },
-          { time: "12:00", temp_c: 32, feels_like_c: 36, rain_probability: 15, rain_mm: 0.1, wind_kmh: 18, humidity_percent: 68, condition: "Partly Cloudy" },
-          { time: "14:00", temp_c: 32, feels_like_c: 35, rain_probability: 12, rain_mm: 0.0, wind_kmh: 19, humidity_percent: 66, condition: "Partly Cloudy" },
-          { time: "16:00", temp_c: 30, feels_like_c: 33, rain_probability: 10, rain_mm: 0.0, wind_kmh: 16, humidity_percent: 70, condition: "Gentle Breeze" },
-          { time: "18:00", temp_c: 28, feels_like_c: 30, rain_probability: 8, rain_mm: 0.0, wind_kmh: 14, humidity_percent: 75, condition: "Clear" },
-          { time: "20:00", temp_c: 27, feels_like_c: 29, rain_probability: 5, rain_mm: 0.0, wind_kmh: 12, humidity_percent: 80, condition: "Cool Night" },
-          { time: "22:00", temp_c: 26, feels_like_c: 27, rain_probability: 5, rain_mm: 0.0, wind_kmh: 10, humidity_percent: 84, condition: "Clear Night" }
-        ],
-        stops: [
-          {
-            order: 1,
-            time: "07:30",
-            time_block: "morning",
-            category: "cafe",
-            name: "Son Tra Marina Cafe",
-            description: "Watch the sunrise over Da Nang Bay with a refreshing 12 km/h sea breeze.",
-            latitude: 16.0965,
-            longitude: 108.2723,
-            forecast_temp_c: 26,
-            rain_probability: 5,
-            weather_condition: "Clear Sky",
-            is_indoor: false,
-            weather_suitability: "good"
-          },
-          {
-            order: 2,
-            time: "09:00",
-            time_block: "morning",
-            category: "attraction",
-            name: "Son Tra Peninsula & Linh Ung Pagoda",
-            description: "Visit the 67m Lady Buddha statue with panoramic ocean vistas.",
-            latitude: 16.1018,
-            longitude: 108.2764,
-            forecast_temp_c: 29,
-            rain_probability: 10,
-            weather_condition: "Sunny",
-            is_indoor: false,
-            weather_suitability: "good"
-          },
-          {
-            order: 3,
-            time: "12:00",
-            time_block: "lunch",
-            category: "restaurant",
-            name: "Be Man Fresh Seafood My Khe",
-            description: "Enjoy fresh local seafood along Vo Nguyen Giap coastal avenue.",
-            latitude: 16.0645,
-            longitude: 108.2468,
-            forecast_temp_c: 32,
-            rain_probability: 15,
-            weather_condition: "Partly Cloudy",
-            is_indoor: true,
-            weather_suitability: "good"
-          },
-          {
-            order: 4,
-            time: "15:30",
-            time_block: "afternoon",
-            category: "beach",
-            name: "My Khe Beach (T20 Zone)",
-            description: "Beach swimming and water sports as afternoon temperature cools to 29°C.",
-            latitude: 16.0601,
-            longitude: 108.2465,
-            forecast_temp_c: 29,
-            rain_probability: 12,
-            weather_condition: "Gentle Breeze",
-            is_indoor: false,
-            weather_suitability: "good"
-          },
-          {
-            order: 5,
-            time: "19:00",
-            time_block: "evening",
-            category: "attraction",
-            name: "Dragon Bridge & Son Tra Night Market",
-            description: "Evening stroll along Han River to admire Dragon Bridge and taste local street food.",
-            latitude: 16.0611,
-            longitude: 108.2272,
-            forecast_temp_c: 27,
-            rain_probability: 8,
-            weather_condition: "Cool Night",
-            is_indoor: false,
-            weather_suitability: "good"
-          }
-        ]
-      },
-      {
-        day: 2,
-        date: "Friday, Sep 11",
-        title: "Museums & Indoor Cultural Experience (Rain-Optimized)",
-        summary: "Afternoon showers forecasted (14:00 - 16:00). Weatherise automatically scheduled indoor museums and dining during peak rain hours.",
-        weather: {
-          high_c: 31,
-          low_c: 24,
-          rain_probability: 58,
-          condition: "Afternoon Showers"
-        },
-        hourly_forecast: [
-          { time: "06:00", temp_c: 25, feels_like_c: 26, rain_probability: 15, rain_mm: 0.0, wind_kmh: 10, humidity_percent: 86, condition: "Cloudy" },
-          { time: "08:00", temp_c: 27, feels_like_c: 29, rain_probability: 20, rain_mm: 0.2, wind_kmh: 12, humidity_percent: 82, condition: "Cloudy" },
-          { time: "10:00", temp_c: 29, feels_like_c: 32, rain_probability: 30, rain_mm: 0.5, wind_kmh: 15, humidity_percent: 78, condition: "Overcast" },
-          { time: "12:00", temp_c: 31, feels_like_c: 35, rain_probability: 40, rain_mm: 1.2, wind_kmh: 18, humidity_percent: 74, condition: "Rain Clouds" },
-          { time: "14:00", temp_c: 28, feels_like_c: 31, rain_probability: 65, rain_mm: 4.8, wind_kmh: 22, humidity_percent: 88, condition: "Showers" },
-          { time: "16:00", temp_c: 27, feels_like_c: 29, rain_probability: 58, rain_mm: 3.2, wind_kmh: 20, humidity_percent: 90, condition: "Showers" },
-          { time: "18:00", temp_c: 26, feels_like_c: 28, rain_probability: 25, rain_mm: 0.4, wind_kmh: 15, humidity_percent: 84, condition: "Clearing Up" },
-          { time: "20:00", temp_c: 25, feels_like_c: 27, rain_probability: 15, rain_mm: 0.0, wind_kmh: 12, humidity_percent: 82, condition: "Cloudy Night" },
-          { time: "22:00", temp_c: 24, feels_like_c: 26, rain_probability: 10, rain_mm: 0.0, wind_kmh: 10, humidity_percent: 85, condition: "Cool Night" }
-        ],
-        stops: [
-          {
-            order: 1,
-            time: "08:00",
-            time_block: "morning",
-            category: "restaurant",
-            name: "Ba Mua Mi Quang - Tran Binh Trong",
-            description: "Authentic Central Vietnam specialty turmeric noodles with shrimp and pork.",
-            latitude: 16.0682,
-            longitude: 108.2201,
-            forecast_temp_c: 27,
-            rain_probability: 20,
-            weather_condition: "Cloudy",
-            is_indoor: true,
-            weather_suitability: "good"
-          },
-          {
-            order: 2,
-            time: "09:30",
-            time_block: "morning",
-            category: "market",
-            name: "Han Market Da Nang",
-            description: "Indoor market shopping for local specialty treats, dry seafood, and crafts.",
-            latitude: 16.0689,
-            longitude: 108.2246,
-            forecast_temp_c: 29,
-            rain_probability: 30,
-            weather_condition: "Overcast",
-            is_indoor: true,
-            weather_suitability: "good"
-          },
-          {
-            order: 3,
-            time: "12:00",
-            time_block: "lunch",
-            category: "restaurant",
-            name: "Tran Pork Rice Paper Rolls",
-            description: "Famous local delicacy lunch in modern air-conditioned dining comfort.",
-            latitude: 16.0654,
-            longitude: 108.2198,
-            forecast_temp_c: 30,
-            rain_probability: 40,
-            weather_condition: "Rain Clouds",
-            is_indoor: true,
-            weather_suitability: "good"
-          },
-          {
-            order: 4,
-            time: "14:00",
-            time_block: "afternoon",
-            category: "attraction",
-            name: "Museum of Cham Sculpture",
-            description: "Sheltered indoor visit during rain showers to explore the world's premier Cham artifact collection.",
-            latitude: 16.0604,
-            longitude: 108.2227,
-            forecast_temp_c: 28,
-            rain_probability: 65,
-            weather_condition: "Showers",
-            is_indoor: true,
-            weather_suitability: "good"
-          },
-          {
-            order: 5,
-            time: "16:30",
-            time_block: "afternoon",
-            category: "cafe",
-            name: "Cong Caphe Bach Dang",
-            description: "Sip signature coconut iced coffee by the Han River as rain skies clear.",
-            latitude: 16.0674,
-            longitude: 108.2241,
-            forecast_temp_c: 27,
-            rain_probability: 25,
-            weather_condition: "Clearing Up",
-            is_indoor: true,
-            weather_suitability: "good"
-          }
-        ]
-      },
-      {
-        day: 3,
-        date: "Saturday, Sep 12",
-        title: "Ba Na Hills Golden Bridge & Hoi An Ancient Town",
-        summary: "Cool 22°C mountain breeze at Ba Na summit, followed by lantern-lit night walk in heritage Hoi An.",
-        weather: {
-          high_c: 28,
-          low_c: 22,
-          rain_probability: 18,
-          condition: "Partly Cloudy & Mountain Mist"
-        },
-        hourly_forecast: [
-          { time: "06:00", temp_c: 22, feels_like_c: 22, rain_probability: 10, rain_mm: 0.0, wind_kmh: 10, humidity_percent: 88, condition: "Mist" },
-          { time: "08:00", temp_c: 23, feels_like_c: 23, rain_probability: 15, rain_mm: 0.0, wind_kmh: 12, humidity_percent: 84, condition: "Sun & Clouds" },
-          { time: "10:00", temp_c: 25, feels_like_c: 26, rain_probability: 18, rain_mm: 0.1, wind_kmh: 14, humidity_percent: 80, condition: "Sun & Clouds" },
-          { time: "12:00", temp_c: 26, feels_like_c: 27, rain_probability: 20, rain_mm: 0.2, wind_kmh: 15, humidity_percent: 76, condition: "Pleasant" },
-          { time: "14:00", temp_c: 28, feels_like_c: 29, rain_probability: 15, rain_mm: 0.0, wind_kmh: 14, humidity_percent: 72, condition: "Partly Cloudy" },
-          { time: "16:00", temp_c: 27, feels_like_c: 28, rain_probability: 12, rain_mm: 0.0, wind_kmh: 12, humidity_percent: 75, condition: "Clear" },
-          { time: "18:00", temp_c: 26, feels_like_c: 27, rain_probability: 8, rain_mm: 0.0, wind_kmh: 10, humidity_percent: 79, condition: "Clear" },
-          { time: "20:00", temp_c: 25, feels_like_c: 26, rain_probability: 5, rain_mm: 0.0, wind_kmh: 8, humidity_percent: 82, condition: "Pleasant Evening" },
-          { time: "22:00", temp_c: 24, feels_like_c: 25, rain_probability: 5, rain_mm: 0.0, wind_kmh: 8, humidity_percent: 85, condition: "Pleasant Night" }
-        ],
-        stops: [
-          {
-            order: 1,
-            time: "08:00",
-            time_block: "morning",
-            category: "attraction",
-            name: "Ba Na Hills Cable Car & Golden Bridge",
-            description: "World-record cable car journey and photography at the giant stone hands.",
-            latitude: 15.9988,
-            longitude: 107.9964,
-            forecast_temp_c: 22,
-            rain_probability: 15,
-            weather_condition: "Sun & Clouds",
-            is_indoor: false,
-            weather_suitability: "good"
-          },
-          {
-            order: 2,
-            time: "11:30",
-            time_block: "lunch",
-            category: "restaurant",
-            name: "French Village & Arapang Buffet",
-            description: "European-style lunch buffet amidst brisk 23°C mountain air.",
-            latitude: 15.9972,
-            longitude: 107.9950,
-            forecast_temp_c: 23,
-            rain_probability: 20,
-            weather_condition: "Pleasant",
-            is_indoor: true,
-            weather_suitability: "good"
-          },
-          {
-            order: 3,
-            time: "15:30",
-            time_block: "afternoon",
-            category: "attraction",
-            name: "Non Nuoc Stone Village - Marble Mountains",
-            description: "Visit traditional marble sculpture caves en route south to Hoi An.",
-            latitude: 16.0028,
-            longitude: 108.2612,
-            forecast_temp_c: 28,
-            rain_probability: 10,
-            weather_condition: "Clear",
-            is_indoor: false,
-            weather_suitability: "good"
-          },
-          {
-            order: 4,
-            time: "18:00",
-            time_block: "dinner",
-            category: "restaurant",
-            name: "Ba Buoi Chicken Rice - Hoi An",
-            description: "Heritage chicken rice dinner in the heart of Hoi An ancient town.",
-            latitude: 15.8795,
-            longitude: 108.3301,
-            forecast_temp_c: 26,
-            rain_probability: 10,
-            weather_condition: "Clear",
-            is_indoor: true,
-            weather_suitability: "good"
-          },
-          {
-            order: 5,
-            time: "19:30",
-            time_block: "evening",
-            category: "attraction",
-            name: "Hoi An Ancient Town & Lantern Market",
-            description: "Release river lanterns on Hoai River and explore thousands of glowing silk lanterns.",
-            latitude: 15.8778,
-            longitude: 108.3283,
-            forecast_temp_c: 25,
-            rain_probability: 5,
-            weather_condition: "Pleasant Evening",
-            is_indoor: false,
-            weather_suitability: "good"
-          }
-        ]
-      }
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. TOURISM — 3-day Da Nang & Hoi An trip with local specialties
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface StopSeed {
+  hour: number;
+  time: string;
+  name: string;
+  area: string;
+  kind: TripStop["kind"];
+  indoor: boolean;
+  note: string;
+  specialty?: string;
+  limits?: { rain: number; wind: number };
+  moved?: string;
+  lat: number;
+  lon: number;
+}
+
+const TRIP: { key: HourlyKey; title: string; summary: string; stops: StopSeed[] }[] = [
+  {
+    key: "thu",
+    title: "Son Tra & My Khe Beach",
+    summary: "Clear and hot. Outdoor stops sit before 10:00 and after 16:00; rest indoors through the 33 °C midday peak.",
+    stops: [
+      { hour: 6, time: "06:30", name: "My Khe Fish Cake Noodles", area: "My Khe", kind: "food", indoor: true, specialty: "Bún Chả Cá", note: "Fish cake noodle soup, Da Nang's signature breakfast.", lat: 16.0511, lon: 108.2468 },
+      { hour: 8, time: "08:00", name: "Son Tra Peninsula & Linh Ung Pagoda", area: "Son Tra", kind: "sight", indoor: false, limits: { rain: 55, wind: 35 }, note: "Lady Buddha viewpoint and coastal road while it is still cool.", lat: 16.0989, lon: 108.2762 },
+      { hour: 11, time: "11:30", name: "Tran Specialty Kitchen", area: "Hai Chau", kind: "food", indoor: true, specialty: "Bánh Tráng Cuốn Thịt Heo", note: "Pork and herb rice-paper rolls; air-conditioned, sit out the heat.", lat: 16.0605, lon: 108.221 },
+      { hour: 16, time: "16:00", name: "My Khe Beach", area: "My Khe", kind: "beach", indoor: false, limits: { rain: 50, wind: 35 }, note: "Swim once the heat drops; wind 14 km/h is swim-safe.", lat: 16.0481, lon: 108.2478 },
+      { hour: 18, time: "18:30", name: "Tran Seafood Restaurant", area: "My An", kind: "food", indoor: false, specialty: "Fresh Seafood", note: "Pick-your-own seafood on the beachfront.", lat: 16.0423, lon: 108.2461 },
+      { hour: 20, time: "20:00", name: "Dragon Bridge", area: "Han River", kind: "sight", indoor: false, limits: { rain: 80, wind: 40 }, note: "Night walk along the Han River; the fire show runs Sat–Sun only.", lat: 16.0607, lon: 108.2272 },
     ],
+  },
+  {
+    key: "fri",
+    title: "Marble Mountains & City Center",
+    summary: "Thunderstorms 13:00–17:00. Marble Mountains moves to the dry morning; the afternoon is all indoor.",
+    stops: [
+      { hour: 7, time: "07:00", name: "Ba Mua Mi Quang", area: "Hai Chau", kind: "food", indoor: true, specialty: "Mì Quảng", note: "Turmeric noodles with shrimp and pork, the Quang Nam classic.", lat: 16.0721, lon: 108.2215 },
+      { hour: 8, time: "08:30", name: "Marble Mountains", area: "Ngu Hanh Son", kind: "sight", indoor: false, limits: { rain: 60, wind: 40 }, moved: "Moved from 14:00", note: "Caves and pagodas before the storm builds.", lat: 16.0013, lon: 108.2621 },
+      { hour: 11, time: "11:30", name: "Non Nuoc Specialty Restaurant", area: "Ngu Hanh Son", kind: "food", indoor: true, specialty: "Gỏi Cá Nam Ô", note: "Nam O raw fish salad with herbs and rice paper.", lat: 16.0075, lon: 108.2588 },
+      { hour: 13, time: "13:30", name: "Museum of Cham Sculpture", area: "Hai Chau", kind: "museum", indoor: true, note: "The world's largest Cham collection; fully covered during the storm.", lat: 16.0668, lon: 108.2237 },
+      { hour: 15, time: "15:30", name: "Han Market", area: "Hai Chau", kind: "market", indoor: true, note: "Covered market for dried seafood, coffee and souvenirs.", lat: 16.0749, lon: 108.2233 },
+      { hour: 18, time: "18:30", name: "Ba Duong Banh Xeo", area: "Hai Chau", kind: "food", indoor: true, specialty: "Bánh Xèo", note: "Crispy rice pancakes with nem lụi skewers, after the rain clears.", lat: 16.0545, lon: 108.216 },
+    ],
+  },
+  {
+    key: "sat",
+    title: "Hoi An Ancient Town",
+    summary: "Partly cloudy and dry. A 45-minute drive south; old town in the morning, river and lanterns late in the day.",
+    stops: [
+      { hour: 7, time: "07:00", name: "Banh My Ba Lan", area: "Hai Chau", kind: "food", indoor: false, specialty: "Bánh Mì", note: "Grab-and-go breakfast before the drive to Hoi An.", lat: 16.0712, lon: 108.2201 },
+      { hour: 9, time: "09:00", name: "Hoi An Ancient Town", area: "Hoi An", kind: "sight", indoor: false, limits: { rain: 60, wind: 40 }, note: "Japanese Bridge and merchant houses before 10:00 heat.", lat: 15.8775, lon: 108.3279 },
+      { hour: 11, time: "11:30", name: "Cao Lau Thanh", area: "Hoi An", kind: "food", indoor: true, specialty: "Cao Lầu", note: "Hoi An's chewy noodles with pork and crackling.", lat: 15.8786, lon: 108.333 },
+      { hour: 15, time: "15:30", name: "Thu Bon River Boat", area: "Hoi An", kind: "river", indoor: false, limits: { rain: 50, wind: 30 }, note: "Covered boats; a light shower (0.6 mm) is possible around 15:00.", lat: 15.876, lon: 108.329 },
+      { hour: 17, time: "17:30", name: "Com Ga Ba Buoi", area: "Hoi An", kind: "food", indoor: true, specialty: "Cơm Gà Hội An", note: "Shredded chicken rice, a Hoi An institution.", lat: 15.879, lon: 108.3305 },
+      { hour: 19, time: "19:00", name: "Hoi An Night Market & Lanterns", area: "Hoi An", kind: "sight", indoor: false, limits: { rain: 60, wind: 40 }, note: "Release a river lantern; rain chance is 10%.", lat: 15.8762, lon: 108.3268 },
+    ],
+  },
+];
+
+function tripStop(key: HourlyKey, s: StopSeed): TripStop {
+  const h = HOURLY[key];
+  const temp = round(h.temp[s.hour]);
+  const rain = h.rainProb[s.hour];
+  const wind = h.wind[s.hour];
+  const ok = s.indoor || !s.limits || (rain <= s.limits.rain && wind <= s.limits.wind);
+  return {
+    time: s.time,
+    name: s.name,
+    area: s.area,
+    kind: s.kind,
+    indoor: s.indoor,
+    note: s.note,
+    specialty: s.specialty,
+    moved: s.moved,
+    forecast: `${unit(temp, "°C")} · ${rain}% rain`,
+    tone: ok ? "ok" : "alert",
+    lat: s.lat,
+    lon: s.lon,
+  };
+}
+
+function hoursWhere(test: (h: number) => boolean, from = 6, to = 22) {
+  const out: number[] = [];
+  for (let h = from; h <= to; h++) if (test(h)) out.push(h);
+  return out;
+}
+
+function tripCharts(key: HourlyKey): ChartSpec[] {
+  const h = HOURLY[key];
+  const storm = hoursWhere((x) => h.lightning.includes(x));
+  const heat = hoursWhere((x) => h.temp[x] >= RULES.tourism.heatHigh);
+  const stormBand = storm.length
+    ? [{ from: storm[0] - 6, to: storm[storm.length - 1] + 1 - 6, label: "Thunderstorm", tone: "alert" as const }]
+    : [];
+  const heatBand = heat.length
+    ? [{ from: heat[0] - 6, to: heat[heat.length - 1] + 1 - 6, label: `Heat ${unit(RULES.tourism.heatHigh, "°C")}`, tone: "caution" as const }]
+    : [];
+  return [
+    {
+      title: "Rain Chance",
+      unit: "%",
+      kind: "bar",
+      points: hourlyPoints("rainProb", { key, hour: 6 }, { key, hour: 22 }),
+      max: 100,
+      threshold: { value: RULES.tourism.rainReschedule, label: "Move indoors above 60%" },
+      bands: stormBand,
+      tickEvery: 2,
+    },
+    {
+      title: "Temperature",
+      unit: "°C",
+      kind: "line",
+      points: hourlyPoints("temp", { key, hour: 6 }, { key, hour: 22 }),
+      min: 22,
+      max: 36,
+      decimals: 1,
+      threshold: { value: RULES.tourism.heatHigh, label: "High heat 33 °C" },
+      bands: [...stormBand, ...heatBand],
+      tickEvery: 2,
+    },
+  ];
+}
+
+export function getTourismMockResponse(): ChatResult {
+  const days: TripDay[] = TRIP.map((t, i) => {
+    const d = day(t.key);
+    return {
+      day: i + 1,
+      date: d.label,
+      title: t.title,
+      summary: t.summary,
+      condition: d.condition,
+      high: d.high,
+      low: d.low,
+      peakRain: d.rainPeak,
+      uv: d.uv,
+      charts: tripCharts(t.key),
+      stops: t.stops.map((s) => tripStop(t.key, s)),
+    };
+  });
+
+  const tripDays = TRIP.map((t) => day(t.key));
+  const hottest = tripDays.reduce((a, b) => (b.high > a.high ? b : a));
+  const wettest = tripDays.reduce((a, b) => (b.rainPeak > a.rainPeak ? b : a));
+  const fri = HOURLY.fri;
+  const peakRainHour = fri.rainProb.indexOf(max(fri.rainProb));
+  const storm = fri.lightning;
+  const stormWindow = `${hh(storm[0])}–${hh(storm[storm.length - 1] + 1)}`;
+  const beachWind = HOURLY.thu.wind[16];
+  const uvPeak = max(tripDays.map((d) => d.uv));
+  const dryDays = tripDays.filter((d) => d.rainPeak <= RULES.tourism.rainSafe);
+
+  // Outdoor stop check, including the slot the planner rejected.
+  const marbleAt14 = HOURLY.fri.rainProb[14];
+  const outdoorRows: Cell[][] = [];
+  TRIP.forEach((t) => {
+    t.stops
+      .filter((s) => !s.indoor && s.limits)
+      .forEach((s) => {
+        const r = HOURLY[t.key].rainProb[s.hour];
+        const w = HOURLY[t.key].wind[s.hour];
+        const ok = r <= s.limits!.rain && w <= s.limits!.wind;
+        outdoorRows.push([
+          cell(s.name),
+          cell(`${day(t.key).short} ${s.time}`),
+          cell(`Rain ≤ ${s.limits!.rain}% · Wind ≤ ${unit(s.limits!.wind, "km/h")}`),
+          cell(`${r}% · ${unit(w, "km/h")}`),
+          cell(pass(ok), ok),
+        ]);
+        if (s.moved) {
+          outdoorRows.push([
+            cell(`${s.name} (original slot)`),
+            cell("Fri 14:00"),
+            cell(`Rain ≤ ${s.limits!.rain}% · Wind ≤ ${unit(s.limits!.wind, "km/h")}`),
+            cell(`${marbleAt14}% · ${unit(HOURLY.fri.wind[14], "km/h")}`),
+            cell("Fail · Moved", false),
+          ]);
+        }
+      });
+  });
+
+  const markers: ReportMarker[] = days.flatMap((d) =>
+    d.stops.map((s, i) => ({
+      id: `d${d.day}-${i}`,
+      lat: s.lat,
+      lon: s.lon,
+      label: String(i + 1),
+      title: `${s.time} · ${s.name}`,
+      detail: s.specialty ? `Try: ${s.specialty}` : s.forecast,
+      tone: s.indoor ? ("neutral" as const) : s.tone,
+      day: d.day,
+    })),
+  );
+
+  const report: Report = {
+    domain: "tourism",
+    as_of: AS_OF,
+    title: "3-Day Trip: Da Nang & Hoi An",
+    prompt: SHOWCASE_PROMPTS.tourism,
+    location: "Da Nang & Hoi An",
+    parsed: [
+      { label: "Domain", value: "Tourism" },
+      { label: "Where", value: "Da Nang, Hoi An" },
+      { label: "When", value: `${tripDays[0].label} – ${tripDays[2].label.split(", ")[1]}` },
+      { label: "Wants", value: "Weather check · Day plan · Local food" },
+    ],
+    asks: ["Is the weather good?", "Plan each day", "Local specialties"],
+    verdict: {
+      tone: "ok",
+      label: "Good to Go",
+      headline: `Yes — all 3 days work. ${wettest.short} afternoon has thunderstorms, so that block is indoors.`,
+      reasons: [
+        `${dryDays.map((d) => d.short).join(" & ")}: dry, ${range(min(tripDays.map((d) => d.low)), hottest.high, "°C")}, rain ≤ ${max(dryDays.map((d) => d.rainPeak))}%.`,
+        `${wettest.short} ${stormWindow}: thunderstorms (${wettest.rainPeak}%), covered by indoor stops.`,
+        `Heat peaks at ${unit(hottest.high, "°C")} — outdoor stops sit before 10:00 and after 16:00.`,
+      ],
+    },
+    alerts: [
+      {
+        tone: "alert",
+        title: "Thunderstorm",
+        window: `${wettest.label} · ${stormWindow}`,
+        detail: `Gusts to ${unit(max(fri.gust), "km/h")} and lightning. Your plan is indoors for this window.`,
+      },
+    ],
+    metrics: [
+      { label: "Max Temp", value: unit(hottest.high, "°C"), context: `${hottest.short} 13:00 · outdoor before 10:00, after 16:00`, tone: "caution" },
+      { label: "Peak Rain", value: `${wettest.rainPeak}%`, context: `${wettest.short} ${hh(peakRainHour)} · indoor ${stormWindow}`, tone: "caution" },
+      { label: "Beach Wind", value: unit(beachWind, "km/h"), context: `${dryDays[0].short} 16:00 · swim-safe below ${unit(RULES.tourism.swimWind, "km/h")}`, tone: "ok" },
+      { label: "UV Peak", value: String(uvPeak), context: "SPF 50+ above UV 8", tone: "caution" },
+    ],
+    sections: [
+      { type: "trip", ask: [2, 3], title: "Day-by-Day Plan", days },
+      {
+        type: "notes",
+        ask: [2],
+        title: "Weather Adjustments",
+        notes: [
+          { title: "Marble Mountains moved to 08:30 Fri", body: `Rain chance at 14:00 is ${marbleAt14}%, above the site's 60% limit. At 08:30 it is ${HOURLY.fri.rainProb[8]}%.` },
+          { title: `Indoor block ${stormWindow} Fri`, body: "Cham Museum and Han Market cover the full storm window; dinner starts after the rain clears." },
+          { title: "Beach at 16:00 Thu", body: `Midday hits ${unit(hottest.high, "°C")}. Rule: outdoor before 10:00 and after 16:00 when heat is 33–37 °C.` },
+        ],
+      },
+      {
+        type: "rules",
+        ask: [1, 2],
+        table: {
+          title: "Outdoor Stop Check",
+          caption: "Each outdoor stop against its own rain and wind limits from the places database.",
+          columns: ["Stop", "Time", "Limit", "Forecast", "Result"],
+          rows: outdoorRows,
+        },
+      },
+    ],
+    sources: {
+      weather: WEATHER_SOURCES,
+      agreement: 0.92,
+      model: MODEL,
+      knowledge: "weather_rules · danang_attractions · danang_restaurants",
+      pipeline: [
+        PIPELINE_BASE.parse,
+        PIPELINE_BASE.resolve,
+        { step: "Find Places & Food", agent: "MCP · places, restaurants", ms: 310 },
+        PIPELINE_BASE.weather,
+        PIPELINE_BASE.consensus,
+        PIPELINE_BASE.rules,
+        { step: "Order Stops", agent: "cuOpt Route Solver", ms: 120 },
+        PIPELINE_BASE.write,
+      ],
+    },
     map: {
-      markers: [
-        { id: "m1", label: "1", latitude: 16.0965, longitude: 108.2723, title: "Son Tra Marina Cafe", category: "cafe", is_indoor: false, weather_condition: "Clear" },
-        { id: "m2", label: "2", latitude: 16.1018, longitude: 108.2764, title: "Linh Ung Pagoda Son Tra", category: "attraction", is_indoor: false, weather_condition: "Sunny" },
-        { id: "m3", label: "3", latitude: 16.0645, longitude: 108.2468, title: "Be Man Seafood My Khe", category: "restaurant", is_indoor: true, weather_condition: "Partly Cloudy" },
-        { id: "m4", label: "4", latitude: 16.0601, longitude: 108.2465, title: "My Khe Beach", category: "beach", is_indoor: false, weather_condition: "Gentle Breeze" },
-        { id: "m5", label: "5", latitude: 16.0611, longitude: 108.2272, title: "Dragon Bridge Da Nang", category: "attraction", is_indoor: false, weather_condition: "Cool" },
-        { id: "m6", label: "6", latitude: 16.0604, longitude: 108.2227, title: "Museum of Cham Sculpture", category: "attraction", is_indoor: true, weather_condition: "Indoor Safe" },
-        { id: "m7", label: "7", latitude: 15.9988, longitude: 107.9964, title: "Golden Bridge Ba Na Hills", category: "attraction", is_indoor: false, weather_condition: "Mist & Clouds" },
-        { id: "m8", label: "8", latitude: 15.8778, longitude: 108.3283, title: "Hoi An Ancient Town", category: "attraction", is_indoor: false, weather_condition: "Clear Night" }
-      ]
-    }
+      title: "Trip Route",
+      center: [15.98, 108.25],
+      zoom: 11,
+      markers,
+      zones: [],
+      route: true,
+      legend: [
+        { label: "Outdoor stop", tone: "ok", shape: "dot" },
+        { label: "Indoor stop", tone: "neutral", shape: "dot" },
+      ],
+    },
   };
 
   return {
-    session_id: "demo-session-tourism-danang",
+    session_id: "demo-tourism",
     status: "success",
     response_type: "trip_planning",
     domain: "tourism",
-    location: "Da Nang, Vietnam",
-    prediction: "Da Nang weather over the next 3 days is highly favorable for travel. Light afternoon showers on Day 2 (40-58%), with sunny, pleasant conditions on Day 1 and Day 3.",
-    recommendation: "Outdoor highlights (Son Tra, My Khe, Golden Bridge) are prioritized during clear morning windows, with indoor museums and markets scheduled for Friday afternoon.",
-    risk_assessment: {
-      rain_risk: "Medium",
-      wind_risk: "Low",
-      heat_risk: "Medium",
-      overall_risk: "Low",
-      trip_disruption_risk: "Low"
-    },
-    weather_stats: {
-      avg_temperature_c: 28.5,
-      min_temperature_c: 24.0,
-      max_temp: 32.0,
-      max_rain_prob: 58,
-      max_wind_speed: 18.5,
-      total_rainfall_mm: 8.2
-    },
-    time_range: {
-      start: "2026-09-10",
-      end: "2026-09-12",
-      raw_text: "Next 3 Days (Sep 10 – Sep 12)"
-    },
-    weather_path: "Path-A (High-resolution Realtime ERA5/Open-Meteo)",
-    weather_confidence: 0.94,
-    weather_mode: "standard_multi_agent",
-    sources_used: ["Open-Meteo HighRes API", "ERA5 Da Nang Coastal Grid", "Da Nang Tourism GIS Vector DB"],
-    tech_stack_info,
-    trip_view,
-    trip_plan: {
-      duration_days: 3,
-      location: "Da Nang, Vietnam",
-      weather_aware: true,
-      planning_mode: "weather_optimized",
-      days: trip_view.days.map(d => ({
-        day: d.day,
-        theme: d.title,
-        primary_area: d.summary,
-        date: d.date,
-        weather_condition: d.weather.condition,
-        stops: d.stops.map(s => ({
-          order: s.order,
-          place_id: `stop-${s.order}-${s.name.replace(/\s+/g, "_")}`,
-          name: s.name,
-          lat: s.latitude,
-          lon: s.longitude,
-          time_block: s.time_block,
-          planned_time: s.time,
-          forecast_temp: s.forecast_temp_c,
-          weather_condition: s.weather_condition,
-          duration_minutes: 75,
-          is_indoor: s.is_indoor,
-          category: s.category,
-          vibe_tags: [s.time_block, s.category, s.is_indoor ? "indoor" : "outdoor"]
-        }))
-      }))
-    }
+    location: report.location,
+    coordinates: { latitude: 16.0544, longitude: 108.2022 },
+    report,
   };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 2. CONSTRUCTION MOCK DATA (Safety Check: Crane Wind & Concrete Temperature)
+// 2. CONSTRUCTION — deck slab pour + tower crane at Hoa Lien Overpass
 // ─────────────────────────────────────────────────────────────────────────────
-export function getConstructionMockResponse(query: string): ChatResult {
-  const tech_stack_info: TechStackInfo = {
-    reasoning_model: "DeepSeek-R1-Distill-Llama-70B (NVIDIA NIM CoT)",
-    domain_agent: "Construction Safety & Concrete Thermal Agent",
-    weather_sources: ["ECMWF 0.1° High-Res Wind Shear", "ERA5 Solar Flux", "Open-Meteo Lightning CAPE"],
-    vector_db: "Qdrant Vector DB (TCVN 5574:2018 & QCVN 18:2021/BXD Index)",
-    guardrails_score: "99.2% Safety Compliance Verified",
-    latency: "1.24s",
-    tokens_per_sec: "44.8 tok/s"
-  };
 
-  const domain_metrics: DomainMetricItem[] = [
-    { label: "Tower Crane Wind Velocity", value: "14.8 m/s", source: "QCVN 18:2021/BXD (Limit: 12.0 m/s)", sub: "High-elevation gust hazard" },
-    { label: "Concrete Hydration Temp", value: "36.5°C", source: "TCVN 5574:2018 Crack Control", sub: "Core thermal gradient limit" },
-    { label: "Convective Energy (CAPE)", value: "2,350 J/kg", source: "ECMWF CAPE Convection Model", sub: "Severe afternoon lightning risk" },
-    { label: "Scaffolding Wind Load", value: "38.0 km/h", source: "TCVN 5308:1991 (Beaufort 6)", sub: "Tie-back reinforcement required" },
-    { label: "Safe Pouring Window", value: "05:30 - 09:30", source: "ACI 305R Hot Weather Standard", sub: "Temp 27°C, wind 8 km/h" },
-    { label: "Water Evaporation Rate", value: "1.18 kg/m²/h", source: "ACI 308 Nomograph Protocol", sub: "Surface moisture loss threshold" },
-    { label: "Accumulated Rain (4h)", value: "32.0 mm", source: "NCHMF Radar Precipitation", sub: "Cement paste washout hazard" },
-    { label: "Safety Compliance Standard", value: "ISO 45001", source: "Occupational Safety Standard", sub: "Automated standard verification" },
+const POUR_HOURS = [7, 8, 9, 10]; // 06:30–10:30
+const POUR_WINDOW = "06:30–10:30";
+const CRANE_HALT = { from: 12, to: 17 };
+
+function nextKey(key: HourlyKey): HourlyKey {
+  return HOURLY_ORDER[Math.min(HOURLY_ORDER.indexOf(key) + 1, HOURLY_ORDER.length - 1)];
+}
+
+function evaluatePour(key: HourlyKey) {
+  const h = HOURLY[key];
+  const temps = POUR_HOURS.map((x) => h.temp[x]);
+  const hum = POUR_HOURS.map((x) => h.humidity[x]);
+  const wind = POUR_HOURS.map((x) => h.wind[x]);
+  const after = span("rainProb", { key, hour: 11 }, { key: nextKey(key), hour: 10 }).map((p) => p.value);
+  const rainAfter = max(after);
+  const soonRain = slice(key, "rainMm", 11, 15).some((v) => v > 0);
+  const firstRain = soonRain ? firstRainAfter(key, 11) : null;
+  const gust = max(h.gust);
+  const lightning = h.lightning;
+  const checks = {
+    rainAfter: rainAfter < RULES.concrete.rainAfterPourMax,
+    soonRain: !soonRain,
+    temp: min(temps) >= RULES.concrete.tempMin && max(temps) <= RULES.concrete.tempMax,
+    humidity: min(hum) >= RULES.concrete.humidityMin && max(hum) <= RULES.concrete.humidityMax,
+    gust: gust < RULES.crane.gustHalt,
+    lightning: lightning.length === 0,
+  };
+  return {
+    temps: range(round(min(temps)), round(max(temps)), "°C"),
+    humidity: range(min(hum), max(hum), "%"),
+    wind: range(min(wind), max(wind), "km/h"),
+    rainAfter,
+    firstRain: firstRain ? hh(firstRain.hour) : null,
+    gust,
+    lightning: lightning.length ? `${hh(lightning[0])}–${hh(lightning[lightning.length - 1] + 1)}` : null,
+    checks,
+    fails: Object.values(checks).filter((c) => !c).length,
+    total: Object.values(checks).length,
+  };
+}
+
+export function getConstructionMockResponse(): ChatResult {
+  const fri = evaluatePour("fri");
+  const thu = evaluatePour("thu");
+  const friDay = day("fri");
+  const thuDay = day("thu");
+  const peakGustHour = HOURLY.fri.gust.indexOf(fri.gust);
+  const stormRain = sum(HOURLY.fri.rainMm);
+  const friRainPeak = max(HOURLY.fri.rainProb);
+  const gustAtHalt = HOURLY.fri.gust[CRANE_HALT.from - 1];
+  const gustAfter = HOURLY.fri.gust[CRANE_HALT.to];
+  const haltWindow = `${hh(CRANE_HALT.from)}–${hh(CRANE_HALT.to)}`;
+
+  // Chart: Thu 06:00 → Fri 20:00, slot 0 = Thu 06:00.
+  const friOffset = 24 - 6;
+  const bands = [
+    { from: 0.5, to: 4.5, label: "Pour Window", tone: "ok" as const },
+    { from: friOffset + CRANE_HALT.from, to: friOffset + CRANE_HALT.to, label: "Crane Halt", tone: "alert" as const },
+  ];
+  const charts: ChartSpec[] = [
+    {
+      title: "Rain Chance",
+      unit: "%",
+      kind: "bar",
+      points: hourlyPoints("rainProb", { key: "thu", hour: 6 }, { key: "fri", hour: 20 }),
+      max: 100,
+      threshold: { value: RULES.concrete.rainAfterPourMax, label: "Pour limit 20%" },
+      bands,
+      tickEvery: 3,
+      dividers: [{ at: 0, label: "Thu" }, { at: friOffset, label: "Fri" }],
+    },
+    {
+      title: "Wind Gust",
+      unit: "km/h",
+      kind: "line",
+      points: hourlyPoints("gust", { key: "thu", hour: 6 }, { key: "fri", hour: 20 }),
+      max: 70,
+      threshold: { value: RULES.crane.gustHalt, label: "Crane halt 60 km/h" },
+      bands,
+      tickEvery: 3,
+      dividers: [{ at: 0, label: "Thu" }, { at: friOffset, label: "Fri" }],
+    },
   ];
 
-  const overview: DomainOverviewData = {
-    title: "Operational Safety Assessment & Structural Risk Overview",
-    subtitle: "Standardized evaluation according to QCVN 18:2021/BXD & TCVN 5574:2018 for Da Nang",
-    executive_summary: "High atmospheric instability and strong convective activity are forecast over Da Nang between 13:00 - 17:00 tomorrow. Peak wind gusts reach 14.8 m/s (exceeding tower crane safe limit of 12.0 m/s) with 32mm convective downpours and CAPE energy of 2,350 J/kg, mandating suspension of high-elevation crane lifts and outdoor concrete casting during the critical afternoon window.",
-    compliance_status: "CRITICAL SAFETY RESTRICTIONS ACTIVE",
-    hazards: [
-      {
-        title: "Tower Crane Wind Shear Hazard",
-        standard_code: "QCVN 18:2021/BXD Section 2.4",
-        status: "Threshold Exceeded",
-        threshold_limit: "12.0 m/s (Max operational limit)",
-        observed_value: "14.8 m/s (Beaufort Scale 6-7 gusts)",
-        impact_description: "Excessive lateral wind load on crane jib and suspended loads creates tipping and uncontrolled swinging hazard.",
-        severity: "high"
-      },
-      {
-        title: "Concrete Thermal Cracking & Evaporation Risk",
-        standard_code: "TCVN 5574:2018 & ACI 308",
-        status: "Evaporation Warning",
-        threshold_limit: "1.00 kg/m²/h evaporation rate",
-        observed_value: "1.18 kg/m²/h at 36.5°C peak ambient",
-        impact_description: "Rapid surface moisture loss causes severe plastic shrinkage cracking and surface dusting before initial set.",
-        severity: "medium"
-      },
-      {
-        title: "Convective Lightning & High-Voltage Equipment",
-        standard_code: "TCVN 9385:2012 Lightning Protection",
-        status: "Severe Risk (13:30 - 16:30)",
-        threshold_limit: "CAPE < 1,000 J/kg",
-        observed_value: "CAPE 2,350 J/kg (Deep Convection)",
-        impact_description: "Cloud-to-ground lightning discharge risk near tall scaffolding towers and metallic structural frameworks.",
-        severity: "high"
-      }
-    ],
-    operational_protocols: [
-      "Mandatory shutdown of all tower cranes and hoisting equipment by 12:30 PM; release slewing brakes to free-weathervaning mode.",
-      "Reschedule concrete batching to early morning window (05:30 - 09:30) or evening shift after 20:00 when ambient temp < 28°C.",
-      "Apply aliphatic alcohol evaporation retardant immediately following screeding, followed by wet burlap and polyethylene curing sheeting.",
-      "Inspect harness lifeline anchors and scaffolding perimeter netting against 38 km/h localized gusts."
-    ]
-  };
+  const ruleRows: Cell[][] = [
+    [cell("Rain chance, 24 h after pour"), cell(`< ${RULES.concrete.rainAfterPourMax}%`), cell(`${fri.rainAfter}% · ${pass(fri.checks.rainAfter)}`, fri.checks.rainAfter), cell(`${thu.rainAfter}% · ${pass(thu.checks.rainAfter)}`, thu.checks.rainAfter)],
+    [cell("Rain within 4 h of finishing"), cell("None"), cell(`${fri.firstRain ? `Starts ${fri.firstRain}` : "None"} · ${pass(fri.checks.soonRain)}`, fri.checks.soonRain), cell(`${thu.firstRain ? `Starts ${thu.firstRain}` : "None"} · ${pass(thu.checks.soonRain)}`, thu.checks.soonRain)],
+    [cell("Temperature during pour"), cell(`10–35${NB}°C`), cell(`${fri.temps} · ${pass(fri.checks.temp)}`, fri.checks.temp), cell(`${thu.temps} · ${pass(thu.checks.temp)}`, thu.checks.temp)],
+    [cell("Humidity during pour"), cell("40–80%"), cell(`${fri.humidity} · ${pass(fri.checks.humidity)}`, fri.checks.humidity), cell(`${thu.humidity} · ${pass(thu.checks.humidity)}`, thu.checks.humidity)],
+    [cell("Peak gust (tower crane)"), cell(`< ${unit(RULES.crane.gustHalt, "km/h")}`), cell(`${unit(fri.gust, "km/h")} · ${pass(fri.checks.gust)}`, fri.checks.gust), cell(`${unit(thu.gust, "km/h")} · ${pass(thu.checks.gust)}`, thu.checks.gust)],
+    [cell("Lightning within 10 km"), cell("None"), cell(`${fri.lightning ?? "None"} · ${pass(fri.checks.lightning)}`, fri.checks.lightning), cell(`${thu.lightning ?? "None"} · ${pass(thu.checks.lightning)}`, thu.checks.lightning)],
+  ];
 
-  const weather_view: WeatherPredictionView = {
-    title: "Construction Weather Safety Assessment — Da Nang",
-    location: {
-      name: "Da Nang Industrial Construction Zone",
-      latitude: 16.0748,
-      longitude: 108.1499
-    },
-    date_range: {
-      start: "2026-09-08",
-      end: "2026-09-14",
-      label: "7-Day Operational Window"
-    },
-    assumption: {
-      summary: "Safety advisory according to QCVN 18:2021/BXD & TCVN 5574:2018 standards. Peak wind gusts of 14.8 m/s and 32mm convective thunderstorm rainfall are forecast between 13:00 - 17:00 tomorrow in Da Nang.",
-      should_go: false,
-      decision_category: "CONSTRUCTION SAFETY & RISK MANAGEMENT",
-      decision_label: "SUSPEND OUTDOOR CONCRETE & CRANE LIFTS (13:00 - 17:00)",
-      key_stat_badge: "TOWER CRANE WIND ALERT",
-      key_stat_value: "Peak Gust 14.8 m/s (Exceeds 12.0 m/s Limit)",
-      reason: "Peak wind velocity exceeds the safe tower crane operational limit (12 m/s per QCVN 18:2021/BXD), and intense rainfall poses a critical risk of cement binder erosion during initial hydration setting."
-    },
-    statistics: {
-      avg_temperature_c: 31.8,
-      min_temperature_c: 26.2,
-      max_temperature_c: 36.5,
-      avg_wind_kmh: 24.2,
-      total_rainfall_mm: 48.5,
-      rain_risk: "High",
-      wind_risk: "High",
-      heat_risk: "High",
-      overall_risk: "High",
-      most_common_condition: "Thunderstorms & Heat Peak"
-    },
-    domain_metrics,
-    tech_stack_info,
-    overview,
-    daily_forecast: [
-      { date: "2026-09-08", day_label: "Tuesday (Today)", condition: "Thunderstorms", condition_icon: "cloud-lightning", max_temp_c: 35.5, min_temp_c: 26.8, wind_kmh: 38, rain_probability: 75, rain_mm: 32, risk: "High" },
-      { date: "2026-09-09", day_label: "Wednesday", condition: "Partly Cloudy", condition_icon: "cloud-sun", max_temp_c: 33.2, min_temp_c: 25.5, wind_kmh: 18, rain_probability: 25, rain_mm: 2, risk: "Low" },
-      { date: "2026-09-10", day_label: "Thursday", condition: "Sunny", condition_icon: "sun", max_temp_c: 34.0, min_temp_c: 26.0, wind_kmh: 14, rain_probability: 10, rain_mm: 0, risk: "Low" },
-      { date: "2026-09-11", day_label: "Friday", condition: "Sunny", condition_icon: "sun", max_temp_c: 35.0, min_temp_c: 26.5, wind_kmh: 15, rain_probability: 15, rain_mm: 0, risk: "Medium" },
-      { date: "2026-09-12", day_label: "Saturday", condition: "Cloudy", condition_icon: "cloud", max_temp_c: 32.5, min_temp_c: 25.0, wind_kmh: 20, rain_probability: 30, rain_mm: 4, risk: "Low" },
-      { date: "2026-09-13", day_label: "Sunday", condition: "Rain", condition_icon: "cloud-rain", max_temp_c: 30.0, min_temp_c: 24.5, wind_kmh: 26, rain_probability: 60, rain_mm: 18, risk: "Medium" },
-      { date: "2026-09-14", day_label: "Monday", condition: "Partly Cloudy", condition_icon: "cloud-sun", max_temp_c: 31.5, min_temp_c: 25.0, wind_kmh: 16, rain_probability: 20, rain_mm: 1, risk: "Low" }
+  const site = { lat: 16.001, lon: 108.152 };
+
+  const report: Report = {
+    domain: "construction",
+    as_of: AS_OF,
+    title: "Deck Slab Pour & Crane Check",
+    prompt: SHOWCASE_PROMPTS.construction,
+    location: "Hoa Lien Interchange Overpass",
+    parsed: [
+      { label: "Domain", value: "Construction" },
+      { label: "Site", value: "Hoa Lien Interchange Overpass" },
+      { label: "Planned", value: `${friDay.label} · morning` },
+      { label: "Work", value: "Deck slab pour · Tower crane" },
     ],
-    recommendations: [
-      "Optimal Concrete Pouring Windows: Reschedule batching to early morning (05:00 - 09:30) or night shift (after 20:00) when surface temp < 30°C and no convective storms.",
-      "Tower Crane Operation: Lock rotation brakes and lower hooks before 12:30 PM when wind velocity crosses 10 m/s threshold.",
-      "Curing Management: Apply evaporation retardant and deploy polyethylene curing sheets to prevent plastic shrinkage cracking (temp gradient > 8°C).",
-      "Scaffolding & High-Elevation Work: Inspect tie-backs and harness anchor points against localized afternoon squalls."
-    ],
-    alternatives: [
+    asks: ["Is Friday safe?", "Best pour window", "Crane stop hours"],
+    verdict: {
+      tone: "alert",
+      label: "Reschedule",
+      headline: `No. Move the pour to Thursday ${POUR_WINDOW}, and stop the crane Friday ${haltWindow}.`,
+      reasons: [
+        `Friday fails ${fri.fails} of ${fri.total} pour and crane rules.`,
+        `Thunderstorm ${fri.lightning}: ${friRainPeak}% rain, ${unit(stormRain, "mm")}, gusts to ${unit(fri.gust, "km/h")}.`,
+        `Thursday passes all ${thu.total}: rain ≤ ${thu.rainAfter}% for 24 h, ${thu.temps}, humidity ${thu.humidity}.`,
+      ],
+    },
+    alerts: [
       {
-        name: "Early Morning Pouring Shift (05:30 - 09:30)",
-        description: "Ambient temp 27°C, gentle 8 km/h wind, 82% RH, optimal per TCVN 5574:2018 standards.",
-        distance_label: "Primary Recommendation"
+        tone: "alert",
+        title: "Crane Halt",
+        window: `${friDay.label} · ${haltWindow}`,
+        detail: `Gusts peak at ${unit(fri.gust, "km/h")} at ${hh(peakGustHour)} (halt above ${RULES.crane.gustHalt}). Lightning within 10${NB}km ${fri.lightning}.`,
+      },
+    ],
+    metrics: [
+      { label: "Fri Peak Gust", value: unit(fri.gust, "km/h"), context: `${hh(peakGustHour)} · crane halt above ${RULES.crane.gustHalt}`, tone: "alert" },
+      { label: "Fri Storm Rain", value: `${friRainPeak}%`, context: `${unit(stormRain, "mm")} · ${fri.lightning}`, tone: "alert" },
+      { label: "Thu Rain Risk, 24 h", value: `${thu.rainAfter}%`, context: `After pour · limit ${RULES.concrete.rainAfterPourMax}%`, tone: "ok" },
+      { label: "Thu Pour Temp", value: thu.temps, context: `Humidity ${thu.humidity} · limit 40–80%`, tone: "ok" },
+    ],
+    sections: [
+      {
+        type: "rules",
+        ask: [1],
+        table: {
+          title: "Rule Check: Friday vs Thursday",
+          caption: `Pour ${POUR_WINDOW}. Limits from the construction knowledge base (concrete pouring & crane rules).`,
+          columns: ["Rule", "Limit", `Fri (Planned)`, `Thu (Proposed)`],
+          rows: ruleRows,
+        },
       },
       {
-        name: "Night Concrete Placement (20:00 - 02:00)",
-        description: "Dry conditions with steady 26.5°C temperature to ensure uniform mass concrete hydration.",
-        distance_label: "Contingency Window"
-      }
+        type: "charts",
+        ask: [2, 3],
+        title: "Thu 06:00 – Fri 20:00, Hourly",
+        caption: "Green: pour window. Dark red: crane halt.",
+        charts,
+      },
+      {
+        type: "answers",
+        ask: [2, 3],
+        title: "Revised Schedule",
+        cards: [
+          {
+            kicker: "Pour Window",
+            title: "Best slot this week",
+            value: `${thuDay.label} · ${POUR_WINDOW}`,
+            tone: "ok",
+            points: [
+              `Rain ≤ ${thu.rainAfter}% for 24 h after the pour (limit ${RULES.concrete.rainAfterPourMax}%).`,
+              "No rain within 4 h of finishing.",
+              `${thu.temps}, humidity ${thu.humidity}.`,
+              `Wind ${thu.wind} — no curing blankets needed (above ${unit(RULES.concrete.curingBlanketWind, "km/h")}).`,
+            ],
+          },
+          {
+            kicker: "Crane Halt",
+            title: "Stop hours",
+            value: `${friDay.label} · ${haltWindow}`,
+            tone: "alert",
+            points: [
+              `Lower and lock the jib by ${hh(CRANE_HALT.from)}; gusts climb from ${gustAtHalt} to ${unit(fri.gust, "km/h")} by ${hh(peakGustHour)}.`,
+              `Lightning within 10${NB}km ${fri.lightning} — clear the deck.`,
+              `Restart after ${hh(CRANE_HALT.to)} once gusts stay below ${unit(RULES.crane.sustainedMax, "km/h")} (${gustAfter} at ${hh(CRANE_HALT.to)}) and a visual check is done.`,
+              `Thursday: no limits (peak gust ${unit(thu.gust, "km/h")}).`,
+            ],
+          },
+        ],
+      },
     ],
+    sources: {
+      weather: WEATHER_SOURCES,
+      agreement: 0.94,
+      model: MODEL,
+      knowledge: "weather_rules · danang_sites",
+      pipeline: [
+        PIPELINE_BASE.parse,
+        PIPELINE_BASE.resolve,
+        { step: "Load Site Profile", agent: "MCP · construction telemetry", ms: 140 },
+        PIPELINE_BASE.weather,
+        PIPELINE_BASE.consensus,
+        PIPELINE_BASE.rules,
+        PIPELINE_BASE.write,
+      ],
+    },
     map: {
-      center: { name: "Da Nang Construction Zone", latitude: 16.0748, longitude: 108.1499 },
+      title: "Site & Lightning Radius",
+      center: [site.lat, site.lon],
+      zoom: 11,
       markers: [
-        { id: "site-1", label: "🏗️ Tower Crane Zone", latitude: 16.0748, longitude: 108.1499, title: "Da Nang Main Structural Zone", description: "Warning: 14.8 m/s wind gusts expected 13:00-17:00 (QCVN 18:2021/BXD)", temperature_c: 35.5, weather_condition: "Convective Storms" },
-        { id: "site-2", label: "🚢 Marine Berth", latitude: 16.1285, longitude: 108.1412, title: "Lien Chieu Port Deepwater Pier", description: "Scaffolding tie-back reinforcement against 38 km/h coastal gusts", temperature_c: 33.0, weather_condition: "High Coastal Gusts" },
-        { id: "site-3", label: "🏭 Concrete Plant", latitude: 16.0820, longitude: 108.1050, title: "Hi-Tech Park Concrete Plant", description: "Early morning batching shift 05:30 - 09:30 recommended", temperature_c: 27.0, weather_condition: "Optimal Pouring" }
-      ]
+        { id: "site", lat: site.lat, lon: site.lon, label: "S", title: "Hoa Lien Interchange Overpass", detail: `Crane halt Fri ${haltWindow}`, tone: "alert" },
+      ],
+      zones: [{ lat: site.lat, lon: site.lon, radius_m: RULES.crane.lightningRadiusKm * 1000, label: `Lightning stop radius · 10${NB}km`, tone: "alert" }],
+      legend: [
+        { label: "Site", tone: "alert", shape: "dot" },
+        { label: "Lightning radius, Fri", tone: "alert", shape: "zone" },
+      ],
     },
-    insights: [
-      {
-        title: "QCVN 18:2021/BXD - Tower Crane Wind Limits",
-        body: "National building safety code mandates complete stoppage of high-elevation lifting when wind gusts reach Beaufort Scale 6 (> 10.8 - 13.8 m/s). Peak gust forecast: 14.8 m/s at 14:30.",
-        type: "wind"
-      },
-      {
-        title: "Hydration Heat & Thermal Cracking (TCVN 5574:2018)",
-        body: "Peak midday temp of 36.5°C coupled with humidity drops elevates water loss > 1.0 kg/m²/h, requiring immediate curing membrane application.",
-        type: "heat"
-      },
-      {
-        title: "Lightning Hazard & Extreme Rainfall",
-        body: "CAPE energy index > 2,350 J/kg indicates high cloud-to-ground lightning risk, necessitating power cutoff for outdoor high-voltage equipment.",
-        type: "rain"
-      }
-    ]
   };
 
   return {
-    session_id: "demo-session-construction",
+    session_id: "demo-construction",
     status: "success",
     response_type: "weather_prediction",
     domain: "construction",
-    location: "Da Nang Construction Zone",
-    prediction: "Tomorrow afternoon (13:00 - 17:00) in Da Nang features localized thunderstorm rainfall of 32mm with wind gusts reaching 38 km/h (14.8 m/s). Morning hours and subsequent days remain dry and workable.",
-    recommendation: "Shift concrete pouring to early morning (05:30 - 09:30) or evening shift after 20:00. Secure tower cranes and inspect scaffolding anchor ties before 12:30 PM.",
-    risk_assessment: {
-      rain_risk: "High",
-      wind_risk: "High",
-      heat_risk: "High",
-      overall_risk: "High",
-      construction_safety_risk: "High"
-    },
-    weather_stats: {
-      avg_temperature_c: 31.8,
-      min_temperature_c: 26.2,
-      max_temp: 36.5,
-      max_rain_prob: 75,
-      max_wind_speed: 38.0,
-      total_rainfall_mm: 32.0
-    },
-    time_range: {
-      start: "2026-09-08",
-      end: "2026-09-09",
-      raw_text: "Tomorrow (13:00 - 17:00 Critical Window)"
-    },
-    weather_path: "Path-A (ECMWF & Open-Meteo Solar/Wind Integration)",
-    weather_confidence: 0.96,
-    weather_mode: "standard_multi_agent",
-    sources_used: ["QCVN 18:2021/BXD Construction Safety Rules", "TCVN 5574:2018 Concrete Standards", "ECMWF High-Res Wind Shear Model"],
-    tech_stack_info,
-    weather_view,
-    coordinates: { latitude: 16.0748, longitude: 108.1499 }
+    location: report.location,
+    coordinates: { latitude: site.lat, longitude: site.lon },
+    report,
   };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 3. AGRICULTURE MOCK DATA (Smart Irrigation & Crop Disease Prevention)
+// 3. AGRICULTURE — irrigation, urea and blast spray for Hoa Vang rice co-op
 // ─────────────────────────────────────────────────────────────────────────────
-export function getAgricultureMockResponse(query: string): ChatResult {
-  const tech_stack_info: TechStackInfo = {
-    reasoning_model: "DeepSeek-R1-Distill-Llama-70B (NVIDIA NIM CoT)",
-    domain_agent: "Agro-Meteorology & Smart Irrigation Domain Agent",
-    weather_sources: ["FAO-56 Penman-Monteith Evapotranspiration", "ERA5 Agricultural Reanalysis", "Open-Meteo Soil & Flux Grid"],
-    vector_db: "Qdrant Hybrid Vector Store (Agro-Knowledge Base NeMo 1024-d)",
-    guardrails_score: "99.6% Agro-Safety Verification Passed",
-    latency: "1.08s",
-    tokens_per_sec: "49.2 tok/s"
-  };
 
-  const domain_metrics: DomainMetricItem[] = [
-    { label: "Reference Evapotranspiration (ETo)", value: "3.6 mm/day", source: "FAO-56 Penman-Monteith Model", sub: "Low crop water demand" },
-    { label: "Crop Coefficient (Kc)", value: "1.05", source: "FAO Irrigation Paper No. 56", sub: "Mid-season rice / vegetative phase" },
-    { label: "Current Soil Moisture", value: "76.0%", source: "ERA5 Agricultural Reanalysis", sub: "Optimal field capacity: 88%" },
-    { label: "Resource Conserved", value: "+38.5%", source: "Smart Irrigation Energy Model", sub: "Pumping electricity & water saved" },
-    { label: "Rice Blast Disease Index", value: "64.0%", source: "Pyricularia Oryzae Microclimate Model", sub: "Relative humidity > 85% for 48h" },
-    { label: "NPK Leaching Risk", value: "HIGH RISK", source: "Nutrient Runoff Risk Index", sub: "46mm rain washes topdress urea" },
-    { label: "Solar Radiation (Rs)", value: "18.4 MJ/m²", source: "Copernicus Atmosphere Service", sub: "Stable photosynthetic active flux" },
-    { label: "Vapor Pressure Deficit (VPD)", value: "0.85 kPa", source: "Atmospheric Moisture Flux", sub: "Stomatal conductance equilibrium" },
+const COOP = { name: "Hoa Vang High-Yield Rice Cooperative", hectares: 145.5, lat: 15.987, lon: 108.124 };
+const START_LEVEL_MM = 50;
+const SPRAY_HOURS = [8, 9, 10]; // 08:00–11:00
+
+function waterBalance() {
+  let level = START_LEVEL_MM;
+  let overflow = 0;
+  return WEEK.map((d) => {
+    const next = level - RULES.rice.dailyUseMm + d.rainHoaVang;
+    const capped = Math.min(next, RULES.rice.waterTargetMax * 10);
+    overflow += next - capped;
+    level = capped;
+    return { day: d, levelCm: round(level / 10, 1), overflow: round(overflow, 1) };
+  });
+}
+
+export function getAgricultureMockResponse(): ChatResult {
+  const balance = waterBalance();
+  const levels = balance.map((b) => b.levelCm);
+  const lowest = balance.reduce((a, b) => (b.levelCm < a.levelCm ? b : a));
+  const weekRain = sum(WEEK.map((d) => d.rainHoaVang));
+  const fri = day("fri");
+  const overflow = balance[balance.length - 1].overflow;
+  const effectiveRain = round(weekRain - overflow, 1);
+  const rainSupplyM3 = Math.round((effectiveRain * COOP.hectares * 10) / 100) * 100;
+  const needsIrrigation = min(levels) < RULES.rice.waterTargetMin;
+
+  // Blast risk: longest run of humidity ≥ 90% starting Fri 13:00.
+  const run = span("humidity", { key: "fri", hour: 13 }, { key: "sat", hour: 23 });
+  let runLen = 0;
+  while (runLen < run.length && run[runLen].value >= RULES.rice.blastHumidity) runLen++;
+  const runEnd = run[runLen];
+  const runTemps = span("temp", { key: "fri", hour: 13 }, { key: runEnd.key, hour: runEnd.hour - 1 }).map((p) => p.value);
+  const blastWindow = `Fri 13:00 – ${day(runEnd.key).short} ${hh(runEnd.hour)}`;
+
+  // Application windows: urea needs no day > 10 mm within 72 h; spray needs calm air and 6 dry hours.
+  const keys: HourlyKey[] = ["wed", "thu", "fri", "sat"];
+  const windows = keys.map((key) => {
+    const idx = WEEK.findIndex((d) => d.key === key);
+    const next3 = WEEK.slice(idx, idx + 3);
+    const wettest = next3.reduce((a, b) => (b.rainHoaVang > a.rainHoaVang ? b : a));
+    const urea = wettest.rainHoaVang <= RULES.rice.ureaMaxDailyRain;
+    const wind = SPRAY_HOURS.map((h) => HOURLY[key].wind[h]);
+    const rain = firstRainAfter(key, 11);
+    const dryHours = rain ? hoursBetween({ key, hour: 11 }, rain) : 48;
+    const calm = max(wind) < RULES.rice.sprayWindMax;
+    const dry = dryHours >= RULES.rice.sprayDryHours;
+    return { key, wettest, urea, wind, dryHours, calm, dry, spray: calm && dry };
+  });
+  const sprayDay = windows.find((w) => w.spray)!;
+  const ureaDay = windows.find((w) => w.urea)!;
+  const ureaBackup = (() => {
+    const idx = WEEK.findIndex((d) => d.key === ureaDay.key) + 1;
+    const next3 = WEEK.slice(idx, idx + 3);
+    return next3.every((d) => d.rainHoaVang <= RULES.rice.ureaMaxDailyRain) ? WEEK[idx] : null;
+  })();
+  const ureaMaxRain = ureaDay.wettest;
+
+  const windowRows: Cell[][] = windows.map((w) => [
+    cell(day(w.key).label),
+    cell(`${unit(w.wettest.rainHoaVang, "mm")} (${w.wettest.short}) · ${pass(w.urea)}`, w.urea),
+    cell(`${range(min(w.wind), max(w.wind), "km/h")} · ${pass(w.calm)}`, w.calm),
+    cell(`${w.dryHours >= 48 ? "48+ h" : `${w.dryHours} h`} · ${pass(w.dry)}`, w.dry),
+  ]);
+
+  const calendar: CalendarDay[] = balance.map((b) => {
+    const items: CalendarDay["items"] = [];
+    if (b.day.key === sprayDay.key) items.push({ text: "Blast spray 08:00–11:00", tone: "ok" });
+    if (b.day.key === ureaDay.key) items.push({ text: "Urea 06:00–09:00", tone: "ok" });
+    if (ureaBackup && b.day.key === ureaBackup.key) items.push({ text: "Urea backup", tone: "neutral" });
+    if (b.day.key === "fri") items.push({ text: "Storm · blast risk", tone: "alert" });
+    items.push({ text: `Water ${unit(b.levelCm.toFixed(1), "cm")}`, tone: "neutral" });
+    return { day: b.day.short, date: b.day.label.split(", ")[1], items };
+  });
+
+  const charts: ChartSpec[] = [
+    {
+      title: "Rain, Hoa Vang",
+      unit: "mm",
+      kind: "bar",
+      points: WEEK.map((d) => ({ tick: d.short, label: d.label, value: d.rainHoaVang })),
+      max: 30,
+      decimals: 1,
+      threshold: { value: RULES.rice.ureaMaxDailyRain, label: "Urea washout above 10 mm" },
+    },
+    {
+      title: "Field Water Level, End of Day",
+      unit: "cm",
+      kind: "line",
+      points: balance.map((b) => ({ tick: b.day.short, label: b.day.label, value: b.levelCm })),
+      min: 0,
+      max: 6,
+      decimals: 1,
+      fixedDecimals: true,
+      targetRange: { from: RULES.rice.waterTargetMin, to: RULES.rice.waterTargetMax, label: "Target 3–5 cm" },
+    },
   ];
 
-  const overview: DomainOverviewData = {
-    title: "Agro-Meteorological Advisory & Crop Protection Overview",
-    subtitle: "Smart irrigation and crop protection schedule for Hoa Vang, Da Nang",
-    executive_summary: "A 48-hour natural precipitation event (46mm total accumulation) will fully replenish root zone soil moisture to 88% Field Capacity in Hoa Vang. Evapotranspiration demand is low (ETo 3.6 mm/day), allowing complete suspension of motor pump irrigation across Hoa Vang farming districts for 48-72 hours, saving 38.5% in operational pumping energy costs.",
-    compliance_status: "IRRIGATION SUSPENDED · DISEASE MONITORING ACTIVE",
-    hazards: [
-      {
-        title: "Nutrient Leaching & Urea Washout Hazard",
-        standard_code: "MARD Agro-Chemical Directive 2024",
-        status: "High Leaching Risk",
-        threshold_limit: "Precipitation < 15 mm/day for topdressing",
-        observed_value: "46 mm cumulative 48h rainfall",
-        impact_description: "Broadcasting granular nitrogen fertilizer prior to rainfall leads to 60-70% nutrient loss via surface runoff into canal waterways.",
-        severity: "high"
-      },
-      {
-        title: "Rice Blast Fungus (Pyricularia oryzae)",
-        standard_code: "National Plant Protection Standard (QCVN 01-189)",
-        status: "Stage 2 Warning Alert",
-        threshold_limit: "RH > 85% for > 36 consecutive hours",
-        observed_value: "RH 86-90% forecast across 48 hours",
-        impact_description: "Extended leaf wetness and warm temperatures (24-30°C) favor fungal spore germination on tender vegetative tillers.",
-        severity: "medium"
-      },
-      {
-        title: "Root Hypoxia & Waterlogging in Low Plots",
-        standard_code: "FAO Soil Drainage Guidelines",
-        status: "Managed Drainage Required",
-        threshold_limit: "Soil Moisture < 90% Saturation",
-        observed_value: "Moisture peaking at 88% Field Capacity",
-        impact_description: "Stagnant standing water in heavy clay furrows reduces root oxygenation if field drainage channels are clogged.",
-        severity: "low"
-      }
-    ],
-    operational_protocols: [
-      "Shut down electrical pump stations across Hoa Vang co-operative blocks; conserve 38.5% in pumping energy costs.",
-      "Withhold all granular urea and NPK topdressing until Friday, Sep 11, when root beds stabilize and sunshine returns.",
-      "Inspect and open primary field drainage gates to prevent localized submergence of nursery plots.",
-      "Schedule preventive biological fungicide (Tricyclazole / Kasugamycin) application for Thursday morning, Sep 10, once leaf surface dew evaporates."
-    ]
-  };
+  const sprayWind = range(min(sprayDay.wind), max(sprayDay.wind), "km/h");
 
-  const weather_view: WeatherPredictionView = {
-    title: "Agricultural Weather & Irrigation Advisory — Da Nang",
-    location: {
-      name: "Hoa Vang Agricultural Zone, Da Nang",
-      latitude: 15.9866,
-      longitude: 108.1511
-    },
-    date_range: {
-      start: "2026-09-08",
-      end: "2026-09-14",
-      label: "7-Day Agro-Meteorological Cycle"
-    },
-    assumption: {
-      summary: "Cumulative natural rainfall of 46mm forecast over the next 48 hours in Hoa Vang, Da Nang. Soil moisture currently at 76%, reference evapotranspiration ETo = 3.6 mm/day.",
-      should_go: false,
-      decision_category: "AGRO-METEOROLOGY & SMART IRRIGATION",
-      decision_label: "PAUSE ARTIFICIAL IRRIGATION FOR NEXT 48 HOURS",
-      key_stat_badge: "RESOURCE OPTIMIZATION",
-      key_stat_value: "+38.5% Water & Energy Conserved",
-      reason: "Anticipated 46mm rainfall satisfies crop water requirements for the next 9-10 days, saving 38.5% in pumping energy costs while preventing root waterlogging and hypoxia."
-    },
-    statistics: {
-      avg_temperature_c: 28.4,
-      min_temperature_c: 23.8,
-      max_temperature_c: 32.5,
-      avg_wind_kmh: 12.5,
-      total_rainfall_mm: 52.0,
-      rain_risk: "High",
-      wind_risk: "Low",
-      heat_risk: "Low",
-      overall_risk: "Medium",
-      most_common_condition: "Beneficial Rainfall & High Humidity"
-    },
-    domain_metrics,
-    tech_stack_info,
-    overview,
-    daily_forecast: [
-      { date: "2026-09-08", day_label: "Tuesday", condition: "Rain", condition_icon: "cloud-rain", max_temp_c: 30.0, min_temp_c: 24.5, wind_kmh: 14, rain_probability: 80, rain_mm: 28, risk: "High" },
-      { date: "2026-09-09", day_label: "Wednesday", condition: "Showers", condition_icon: "cloud-rain", max_temp_c: 29.5, min_temp_c: 24.0, wind_kmh: 12, rain_probability: 65, rain_mm: 18, risk: "Medium" },
-      { date: "2026-09-10", day_label: "Thursday", condition: "Partly Cloudy", condition_icon: "cloud-sun", max_temp_c: 31.0, min_temp_c: 24.5, wind_kmh: 10, rain_probability: 20, rain_mm: 2, risk: "Low" },
-      { date: "2026-09-11", day_label: "Friday", condition: "Sunny", condition_icon: "sun", max_temp_c: 32.5, min_temp_c: 25.0, wind_kmh: 11, rain_probability: 10, rain_mm: 0, risk: "Low" },
-      { date: "2026-09-12", day_label: "Saturday", condition: "Sunny", condition_icon: "sun", max_temp_c: 33.0, min_temp_c: 25.2, wind_kmh: 13, rain_probability: 15, rain_mm: 0, risk: "Low" },
-      { date: "2026-09-13", day_label: "Sunday", condition: "Partly Cloudy", condition_icon: "cloud-sun", max_temp_c: 31.8, min_temp_c: 24.8, wind_kmh: 12, rain_probability: 25, rain_mm: 3, risk: "Low" },
-      { date: "2026-09-14", day_label: "Monday", condition: "Cloudy", condition_icon: "cloud", max_temp_c: 30.5, min_temp_c: 24.0, wind_kmh: 15, rain_probability: 30, rain_mm: 5, risk: "Low" }
+  const report: Report = {
+    domain: "agriculture",
+    as_of: AS_OF,
+    title: "Rice Field Plan: Hoa Vang Co-op",
+    prompt: SHOWCASE_PROMPTS.agriculture,
+    location: COOP.name,
+    parsed: [
+      { label: "Domain", value: "Agriculture" },
+      { label: "Farm", value: `Hoa Vang rice co-op · ${unit(COOP.hectares, "ha")}` },
+      { label: "Crop", value: "Hè Thu rice · tillering" },
+      { label: "When", value: `This week · ${WEEK[0].label.split(", ")[1]}–${WEEK[6].label.split(", ")[1].split(NB)[1]}` },
     ],
-    recommendations: [
-      "Smart Irrigation Schedule (Penman-Monteith): Suspend motor pumps on Sep 8-9. Resume drip/furrow cycle on Sep 11 morning (35 m³/ha).",
-      "Fertilizer Nutrient Management: Do NOT broadcast urea or foliar nitrogen prior to rainfall to eliminate runoff into canal waterways.",
-      "Blast Fungus Early Warning: Sustained 86% RH triggers Pyricularia oryzae sporulation. Schedule biological fungicide spray on Sep 10 after morning dew clears.",
-      "Field Drainage: Clear furrow channels for orchards and low-lying vegetable plots."
-    ],
-    alternatives: [
+    asks: ["Irrigate this week?", "When to top-dress urea", "When to spray for blast"],
+    verdict: {
+      tone: needsIrrigation ? "caution" : "ok",
+      label: needsIrrigation ? "Top Up Needed" : "Skip Irrigation",
+      headline: `No irrigation needed. Spray for blast ${day(sprayDay.key).short === "Thu" ? "Thursday" : day(sprayDay.key).short} morning, top-dress urea ${day(ureaDay.key).short === "Sat" ? "Saturday" : day(ureaDay.key).short}.`,
+      reasons: [
+        `Rain this week: ${unit(weekRain, "mm")} in Hoa Vang, ${unit(fri.rainHoaVang, "mm")} of it on Friday.`,
+        `Field water stays within 3–5${NB}cm all week (low ${unit(lowest.levelCm.toFixed(1), "cm")} on ${lowest.day.short}).`,
+        `${day(sprayDay.key).short === "Thu" ? "Thursday" : day(sprayDay.key).short} is the only dry, calm spray slot before Friday's storm.`,
+      ],
+    },
+    alerts: [
       {
-        name: "Post-Rain Fertilizer Topdressing (Sep 11)",
-        description: "Optimal fertilizer uptake when soil is moist and sunny temps reach 31°C.",
-        distance_label: "Recommended Timing"
+        tone: "alert",
+        title: "Rice Blast Risk",
+        window: blastWindow,
+        detail: `Humidity ≥ 90% for ${runLen} h at ${range(round(min(runTemps)), round(max(runTemps)), "°C")}. Spray before it starts.`,
       },
       {
-        name: "Foliar Fungicide Application (Sep 10 Morning)",
-        description: "Dry leaf canopy enhances adhesion of biological plant protection agents.",
-        distance_label: "Preventive Measure"
-      }
+        tone: "caution",
+        title: "Hold Urea",
+        window: "Wed – Fri",
+        detail: `Friday's ${unit(fri.rainHoaVang, "mm")} would wash fertilizer into the canals.`,
+      },
     ],
+    metrics: [
+      { label: "Rain This Week", value: unit(weekRain, "mm"), context: `${unit(fri.rainHoaVang, "mm")} on Fri · Hoa Vang`, tone: "neutral" },
+      { label: "Field Water Level", value: `${lowest.levelCm.toFixed(1)}–${RULES.rice.waterTargetMax.toFixed(1)}${NB}cm`, context: `Target 3–5${NB}cm · no pumping`, tone: "ok" },
+      { label: "Field Water Use", value: `${RULES.rice.dailyUseMm}${NB}mm/day`, context: `ETc ${RULES.rice.etc} + seepage ${RULES.rice.seepage}`, tone: "neutral" },
+      { label: "Rain Supply", value: `≈${rainSupplyM3.toLocaleString("en-US")}${NB}m³`, context: `${unit(effectiveRain, "mm")} kept on ${unit(COOP.hectares, "ha")}`, tone: "ok" },
+    ],
+    sections: [
+      {
+        type: "charts",
+        ask: [1],
+        title: "Rain vs Field Water, 7 Days",
+        caption: `Start ${unit(START_LEVEL_MM / 10, "cm")}; fields use ${RULES.rice.dailyUseMm}${NB}mm/day; bund outlets drain above 5${NB}cm.`,
+        charts,
+      },
+      {
+        type: "answers",
+        ask: [1, 2, 3],
+        title: "Field Schedule",
+        cards: [
+          {
+            kicker: "Irrigation",
+            title: "Pumps",
+            value: "None This Week",
+            tone: "ok",
+            points: [
+              `Water stays ${`${lowest.levelCm.toFixed(1)}–${RULES.rice.waterTargetMax.toFixed(1)}${NB}cm`} without pumping (target 3–5${NB}cm).`,
+              `Friday's ${unit(fri.rainHoaVang, "mm")} refills the field; outlets drain the ${unit(overflow, "mm")} excess.`,
+              `Check again ${lowest.day.label}: level reaches ${unit(lowest.levelCm.toFixed(1), "cm")}.`,
+            ],
+          },
+          {
+            kicker: "Blast Spray",
+            title: "Tricyclazole, preventive",
+            value: `${day(sprayDay.key).label} · 08:00–11:00`,
+            tone: "ok",
+            points: [
+              `Leaves dry after dew; wind ${sprayWind} (limit ${RULES.rice.sprayWindMax}).`,
+              `${sprayDay.dryHours} h rain-free after spraying (needs ${RULES.rice.sprayDryHours} h).`,
+              `Covers the crop before the ${blastWindow} risk window.`,
+            ],
+          },
+          {
+            kicker: "Urea Top-Dress",
+            title: "Second split",
+            value: `${day(ureaDay.key).label} · 06:00–09:00`,
+            tone: "ok",
+            points: [
+              `No day above ${unit(RULES.rice.ureaMaxDailyRain, "mm")} in the next 72 h (max ${unit(ureaMaxRain.rainHoaVang, "mm")}, ${ureaMaxRain.short}).`,
+              `Wed–Fri fail: Friday's ${unit(fri.rainHoaVang, "mm")} would wash it off.`,
+              `${ureaBackup ? `Backup: ${ureaBackup.label}. ` : ""}Keep the dose moderate — extra nitrogen raises blast risk.`,
+            ],
+          },
+        ],
+      },
+      {
+        type: "rules",
+        ask: [2, 3],
+        table: {
+          title: "Application Windows",
+          caption: "Urea: no day above 10 mm within 72 h. Spray 08:00–11:00: wind below 15 km/h and 6 rain-free hours.",
+          columns: ["Day", "Urea · Wettest Day, 72 h", "Spray · Wind", "Spray · Dry Hours"],
+          rows: windowRows,
+        },
+      },
+      { type: "calendar", ask: [1, 2, 3], title: "Week at a Glance", days: calendar },
+    ],
+    sources: {
+      weather: WEATHER_SOURCES,
+      agreement: 0.93,
+      model: MODEL,
+      knowledge: "agriculture_rules · FAO-56 crop coefficients",
+      pipeline: [
+        PIPELINE_BASE.parse,
+        PIPELINE_BASE.resolve,
+        { step: "Load Field Profile", agent: "MCP · agriculture telemetry", ms: 150 },
+        PIPELINE_BASE.weather,
+        PIPELINE_BASE.consensus,
+        PIPELINE_BASE.rules,
+        PIPELINE_BASE.write,
+      ],
+    },
     map: {
-      center: { name: "Hoa Vang Agricultural Zone", latitude: 15.9866, longitude: 108.1511 },
+      title: "Co-op Fields",
+      center: [COOP.lat, COOP.lon],
+      zoom: 13,
       markers: [
-        { id: "agri-1", label: "🌾 Rice Co-op Block A", latitude: 15.9866, longitude: 108.1511, title: "Hoa Vang Main Paddy Block A", description: "Forecasted 46mm rainfall - Artificial irrigation suspended", temperature_c: 29.5, weather_condition: "Moisture Recharge" },
-        { id: "agri-2", label: "💧 Drainage Canal", latitude: 15.9622, longitude: 108.1750, title: "Hoa Tien Primary Drainage Canal", description: "Sluice gates opened for gravity drainage of low plots", temperature_c: 28.5, weather_condition: "Active Drainage" },
-        { id: "agri-3", label: "🔬 Spore Station", latitude: 15.9955, longitude: 108.1288, title: "Tuy Loan Bio-Protection Post", description: "RH 88% triggers Pyricularia oryzae fungal warning alert", temperature_c: 29.0, weather_condition: "Fungal Watch" }
-      ]
+        { id: "coop", lat: COOP.lat, lon: COOP.lon, label: "F", title: COOP.name, detail: `${unit(COOP.hectares, "ha")} · surface gravity irrigation`, tone: "ok" },
+      ],
+      zones: [{ lat: COOP.lat, lon: COOP.lon, radius_m: 680, label: `Co-op fields · ${unit(COOP.hectares, "ha")}`, tone: "ok" }],
+      legend: [{ label: `Rice fields · ${unit(COOP.hectares, "ha")}`, tone: "ok", shape: "zone" }],
     },
-    insights: [
-      {
-        title: "FAO-56 Evapotranspiration Analysis (ETo)",
-        body: "Forecast ETo of 3.6 mm/day with crop coefficient Kc = 1.05 indicates 46mm rainfall fully sustains crop water requirements for 9-10 days.",
-        type: "rain"
-      },
-      {
-        title: "Root Zone Soil Moisture Balance (0-30cm)",
-        body: "Soil moisture expected to reach Field Capacity (88%) without causing anaerobic root stress.",
-        type: "general"
-      },
-      {
-        title: "Fungal Disease Micro-Climate Risk",
-        body: "Mean relative humidity of 86% activates Stage 2 early warning for rice blast fungus (Pyricularia oryzae).",
-        type: "general"
-      }
-    ]
   };
 
   return {
-    session_id: "demo-session-agriculture",
+    session_id: "demo-agriculture",
     status: "success",
     response_type: "weather_prediction",
     domain: "agriculture",
-    location: "Hoa Vang Agricultural Zone, Da Nang",
-    prediction: "Widespread beneficial rainfall with 46mm cumulative accumulation over the next 48 hours in Da Nang, followed by warm, sunny conditions (31-33°C) starting Thursday.",
-    recommendation: "Pause artificial irrigation for 2 days (Sep 8-9) to save energy and water. Hold fertilizer application and schedule preventive blast fungus treatment for Thursday morning, Sep 10.",
-    risk_assessment: {
-      rain_risk: "High",
-      wind_risk: "Low",
-      heat_risk: "Low",
-      overall_risk: "Medium",
-      disease_risk: "Medium"
-    },
-    weather_stats: {
-      avg_temperature_c: 28.4,
-      min_temperature_c: 23.8,
-      max_temp: 33.0,
-      max_rain_prob: 80,
-      max_wind_speed: 15.0,
-      total_rainfall_mm: 46.0
-    },
-    time_range: {
-      start: "2026-09-08",
-      end: "2026-09-14",
-      raw_text: "Next 7 Days Farming Advisory"
-    },
-    weather_path: "Path-A (FAO-56 Penman-Monteith Evapotranspiration Agent)",
-    weather_confidence: 0.95,
-    weather_mode: "standard_multi_agent",
-    sources_used: ["FAO-56 Irrigation Model", "ERA5 Agrometeorological Reanalysis", "Vietnam National Agricultural Extension Portal"],
-    tech_stack_info,
-    weather_view,
-    coordinates: { latitude: 15.9866, longitude: 108.1511 }
+    location: report.location,
+    coordinates: { latitude: COOP.lat, longitude: COOP.lon },
+    report,
   };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 4. SEVERE WEATHER / ALERTS MOCK DATA
+// 4. SEVERE WEATHER — weekly hazard scan
 // ─────────────────────────────────────────────────────────────────────────────
-export function getSevereWeatherMockResponse(query: string): ChatResult {
-  const tech_stack_info: TechStackInfo = {
-    reasoning_model: "DeepSeek-R1-Distill-Llama-70B (NVIDIA NIM CoT)",
-    domain_agent: "Severe Hydro-Meteorological Hazard & Typhoon Tracking Agent",
-    weather_sources: ["JMA Himawari-9 Satellite IR/Water Vapor", "SWAN Coastal Wave Model", "NCHMF Radar Integration"],
-    vector_db: "Qdrant Vector DB (Emergency Disaster Contingency SOPs)",
-    guardrails_score: "99.8% Safety Verification Passed",
-    latency: "1.15s",
-    tokens_per_sec: "47.6 tok/s"
-  };
 
-  const domain_metrics: DomainMetricItem[] = [
-    { label: "Atmospheric Barometric Pressure", value: "1008.2 hPa", source: "WMO Station 48855 (Da Nang)", sub: "Barometric trend stable" },
-    { label: "Significant Wave Height (Hs)", value: "1.2 - 1.8 m", source: "SWAN Coastal Wave Model", sub: "Calm to moderate nearshore" },
-    { label: "Himawari Satellite Tracking", value: "Band 8 IR", source: "JMA Himawari-9 Geostationary", sub: "Tropical trough at 14°N axis" },
-    { label: "Disaster Risk Level", value: "Level 1 (Yellow)", source: "National Disaster Committee", sub: "Advisory for offshore fleets" },
-    { label: "Offshore Wind Gust", value: "42.0 km/h", source: "ECMWF Marine Surface Wind", sub: "Beaufort Scale 6 in open sea" },
-    { label: "Marine Visibility Range", value: "> 10 km", source: "Coastal Navigational Sensor", sub: "Drops to 4-6km during showers" },
-    { label: "Urban Inundation Probability", value: "< 15%", source: "Da Nang Hydrodynamic Model", sub: "Han River drainage operational" },
-    { label: "Emergency Readiness", value: "24/7 Active Watch", source: "Central Forecast Center", sub: "Automated alert monitoring" },
-  ];
+export function getSevereWeatherMockResponse(): ChatResult {
+  const fri = day("fri");
+  const h = HOURLY.fri;
+  const peakGust = max(h.gust);
+  const peakGustHour = h.gust.indexOf(peakGust);
+  const peakRate = max(h.rainMm);
+  const storm = `${hh(h.lightning[0])}–${hh(h.lightning[h.lightning.length - 1] + 1)}`;
+  const seaWindHours = hoursWhere((x) => h.wind[x] > RULES.severe.seaWindAvoid, 0, 23);
+  const weekRain = sum(WEEK.map((d) => d.rainCity));
+  const warnings = WEEK.filter((d) => d.gustMax > RULES.severe.stormGust);
+  const mon = day("mon");
 
-  const overview: DomainOverviewData = {
-    title: "Coastal Early Warning & Meteorological Hazard Overview",
-    subtitle: "Hydro-meteorological risk evaluation for Da Nang Coastal Zone & Son Tra",
-    executive_summary: "Monitoring tropical low-pressure trough in the central South China Sea. Satellite tracking confirms no direct typhoon formation or landfall for Da Nang over the next 5-7 days. Nearshore tourism and city activities proceed normally; offshore fishing vessels are advised of Force 6 winds in open waters.",
-    compliance_status: "NORMAL COASTAL OPERATIONS · MARITIME ADVISORY",
-    hazards: [
+  const report: Report = {
+    domain: "severe_weather",
+    as_of: AS_OF,
+    title: "Severe Weather Scan: Da Nang",
+    prompt: SHOWCASE_PROMPTS.severe_weather,
+    location: "Da Nang",
+    parsed: [
+      { label: "Domain", value: "Severe Weather" },
+      { label: "Where", value: "Da Nang & coast" },
+      { label: "When", value: `Next 7 days · ${WEEK[0].label.split(", ")[1]}–${WEEK[6].label.split(", ")[1].split(NB)[1]}` },
+      { label: "Wants", value: "Warnings · Typhoons · Plan changes" },
+    ],
+    asks: ["Any severe weather?", "Any typhoon?", "What to change"],
+    verdict: {
+      tone: "caution",
+      label: `${warnings.length} Warning`,
+      headline: `One thunderstorm warning: Friday ${storm}. No typhoon expected in the next 120 h.`,
+      reasons: [
+        `Friday: ${fri.rainPeak}% storms, gusts to ${unit(peakGust, "km/h")}, lightning ${storm}.`,
+        `${mon.short}: showers ${mon.rainPeak}%, gusts ${unit(mon.gustMax, "km/h")} — below warning level.`,
+        "No tropical depression forecast in the South China Sea within 120 h.",
+      ],
+    },
+    alerts: [
       {
-        title: "Offshore Wave & Wind Surge",
-        standard_code: "Maritime Safety Authority Standard",
-        status: "Advisory Level",
-        threshold_limit: "Wave height Hs < 2.0m for small craft",
-        observed_value: "Hs 1.2 - 1.8m nearshore / 2.5m offshore",
-        impact_description: "Small leisure boats should avoid deep-sea night sailing; nearshore swimming zones remain safe.",
-        severity: "medium"
+        tone: "alert",
+        title: "Thunderstorm Warning",
+        window: `${fri.label} · ${storm}`,
+        detail: `Gusts to ${unit(peakGust, "km/h")}, ${unit(sum(h.rainMm), "mm")} rain, lightning within 10${NB}km.`,
+      },
+    ],
+    metrics: [
+      { label: "Peak Gust", value: unit(peakGust, "km/h"), context: `Fri ${hh(peakGustHour)} · storm level above ${RULES.severe.stormGust}`, tone: "alert" },
+      { label: "Peak Rain Rate", value: unit(peakRate, "mm/h"), context: `Fri 14:00 · heavy above ${RULES.severe.heavyRainRate}`, tone: "caution" },
+      { label: "Rain This Week", value: unit(weekRain, "mm"), context: `${unit(fri.rainCity, "mm")} on Fri`, tone: "neutral" },
+      { label: "Typhoon Risk", value: "None", context: "Next 120 h", tone: "ok" },
+    ],
+    sections: [
+      {
+        type: "charts",
+        ask: [1],
+        title: "Daily Peaks, 7 Days",
+        charts: [
+          {
+            title: "Peak Gust",
+            unit: "km/h",
+            kind: "line",
+            points: WEEK.map((d) => ({ tick: d.short, label: d.label, value: d.gustMax })),
+            max: 70,
+            threshold: { value: RULES.severe.stormGust, label: "Storm level 50 km/h" },
+          },
+          {
+            title: "Rain, City",
+            unit: "mm",
+            kind: "bar",
+            points: WEEK.map((d) => ({ tick: d.short, label: d.label, value: d.rainCity })),
+            max: 20,
+            decimals: 1,
+          },
+        ],
       },
       {
-        title: "Urban Drainage & Runoff Capacity",
-        standard_code: "Urban Flood Control Regulation",
-        status: "Low Inundation Risk",
-        threshold_limit: "Rainfall < 50mm/2h threshold",
-        observed_value: "16-20mm localized afternoon showers",
-        impact_description: "Han River tidal sluice gates and municipal drainage pumps maintain adequate discharge capacity.",
-        severity: "low"
-      }
-    ],
-    operational_protocols: [
-      "Maintain 24/7 radio contact with Son Tra Maritime Station on VHF Channel 16.",
-      "Beach safety lifeguards active across My Khe, Non Nuoc, and Pham Van Dong beaches.",
-      "Monitor daily 06:00 and 18:00 bulletin updates from NCHMF Da Nang Station."
-    ]
-  };
-
-  const weather_view: WeatherPredictionView = {
-    title: "Severe Weather & Coastal Early Warning System — Da Nang",
-    location: {
-      name: "Da Nang Coastal Waters & Son Tra Peninsula",
-      latitude: 16.0544,
-      longitude: 108.2022
-    },
-    date_range: {
-      start: "2026-09-08",
-      end: "2026-09-14",
-      label: "7-Day Coastal Alert Horizon"
-    },
-    assumption: {
-      summary: "Monitoring tropical low-pressure trough in the central South China Sea. No direct typhoon landfall is forecast for the Da Nang mainland over the next 5 days.",
-      should_go: true,
-      decision_category: "DISASTER MONITORING & OCEANOGRAPHY",
-      decision_label: "MAINLAND SAFE - CAUTION FOR OFFSHORE VESSELS",
-      key_stat_badge: "120H HORIZON",
-      key_stat_value: "No Direct Typhoon Landfall",
-      reason: "Mainland operations remain normal with brief evening showers; offshore waters experience Force 6-7 wind gusts and 2.0 - 3.0m wave heights."
-    },
-    statistics: {
-      avg_temperature_c: 30.5,
-      min_temperature_c: 25.0,
-      max_temperature_c: 34.0,
-      avg_wind_kmh: 22.0,
-      total_rainfall_mm: 36.0,
-      rain_risk: "Medium",
-      wind_risk: "Medium",
-      heat_risk: "Medium",
-      overall_risk: "Medium",
-      most_common_condition: "Afternoon Convective Storms"
-    },
-    domain_metrics,
-    tech_stack_info,
-    overview,
-    daily_forecast: [
-      { date: "2026-09-08", day_label: "Tuesday", condition: "Thunderstorms", condition_icon: "cloud-lightning", max_temp_c: 33.5, min_temp_c: 25.5, wind_kmh: 28, rain_probability: 65, rain_mm: 16, risk: "Medium" },
-      { date: "2026-09-09", day_label: "Wednesday", condition: "Partly Cloudy", condition_icon: "cloud-sun", max_temp_c: 32.0, min_temp_c: 25.0, wind_kmh: 22, rain_probability: 30, rain_mm: 4, risk: "Low" },
-      { date: "2026-09-10", day_label: "Thursday", condition: "Sunny", condition_icon: "sun", max_temp_c: 33.0, min_temp_c: 25.5, wind_kmh: 16, rain_probability: 15, rain_mm: 0, risk: "Low" },
-      { date: "2026-09-11", day_label: "Friday", condition: "Sunny", condition_icon: "sun", max_temp_c: 34.0, min_temp_c: 26.0, wind_kmh: 18, rain_probability: 10, rain_mm: 0, risk: "Low" },
-      { date: "2026-09-12", day_label: "Saturday", condition: "Cloudy", condition_icon: "cloud", max_temp_c: 32.0, min_temp_c: 24.8, wind_kmh: 24, rain_probability: 40, rain_mm: 6, risk: "Low" },
-      { date: "2026-09-13", day_label: "Sunday", condition: "Showers", condition_icon: "cloud-rain", max_temp_c: 30.5, min_temp_c: 24.2, wind_kmh: 26, rain_probability: 55, rain_mm: 10, risk: "Medium" },
-      { date: "2026-09-14", day_label: "Monday", condition: "Partly Cloudy", condition_icon: "cloud-sun", max_temp_c: 31.5, min_temp_c: 25.0, wind_kmh: 18, rain_probability: 20, rain_mm: 0, risk: "Low" }
-    ],
-    recommendations: [
-      "Offshore Fishing & Commercial Fleets: Maintain routine communications with regional maritime safety stations.",
-      "Coastal Tourism & Cable Cars: Operations proceed normally during daylight; avoid late-night beach activities during squalls.",
-      "Urban Structural Maintenance: Inspect billboards and roadside trees ahead of seasonal storm transition."
-    ],
-    alternatives: [
+        type: "answers",
+        ask: [3],
+        title: "What to Change",
+        cards: [
+          {
+            kicker: "Outdoor Plans",
+            title: "Friday afternoon",
+            value: `Indoors ${storm}`,
+            tone: "alert",
+            points: ["Move tours, markets and motorbike trips to the morning.", "Rain clears by 18:00; evenings are fine."],
+          },
+          {
+            kicker: "Beach & Sea",
+            title: "Swimming and boats",
+            value: `No sea activity Fri ${hh(seaWindHours[0])}–${hh(seaWindHours[seaWindHours.length - 1] + 1)}`,
+            tone: "caution",
+            points: [
+              `Wind tops ${unit(max(h.wind), "km/h")}; avoid the sea above ${unit(RULES.severe.seaWindAvoid, "km/h")}.`,
+              `Thu & Sat: wind ≤ ${unit(max([...HOURLY.thu.wind, ...HOURLY.sat.wind]), "km/h")}, swim-safe.`,
+            ],
+          },
+          {
+            kicker: "Work Sites",
+            title: "Cranes and scaffolding",
+            value: "Halt cranes Fri 12:00–17:00",
+            tone: "alert",
+            points: [`Gusts pass the ${unit(RULES.crane.gustHalt, "km/h")} crane limit at ${hh(peakGustHour)}.`, "Tie down loose materials before noon."],
+          },
+        ],
+      },
       {
-        name: "Da Nang City Center Indoor Attractions",
-        description: "Museum of Cham Sculpture, Dragon Bridge promenade, Han Market, and Vincom Center remain fully sheltered.",
-        distance_label: "Sheltered Zone"
-      }
+        type: "rules",
+        ask: [1, 2],
+        table: {
+          title: "Hazard Check",
+          columns: ["Hazard", "Threshold", "Peak This Week", "Status"],
+          rows: [
+            [cell("Wind gust"), cell(`> ${unit(RULES.severe.stormGust, "km/h")}`), cell(`${unit(peakGust, "km/h")} · Fri ${hh(peakGustHour)}`), cell("Warning", false)],
+            [cell("Lightning"), cell(`Within 10${NB}km`), cell(`Fri ${storm}`), cell("Warning", false)],
+            [cell("Rain rate"), cell(`> ${unit(RULES.severe.heavyRainRate, "mm/h")}`), cell(`${unit(peakRate, "mm/h")} · Fri 14:00`), cell("Below", true)],
+            [cell("Sea wind"), cell(`> ${unit(RULES.severe.seaWindAvoid, "km/h")}`), cell(`${unit(max(h.wind), "km/h")} · Fri 14:00`), cell("Avoid sea", false)],
+            [cell("Tropical cyclone"), cell("Within 120 h"), cell("None tracked"), cell("Clear", true)],
+          ],
+        },
+      },
     ],
+    sources: {
+      weather: WEATHER_SOURCES,
+      agreement: 0.95,
+      model: MODEL,
+      knowledge: "weather_rules · typhoon_construction_protocol",
+      pipeline: [
+        PIPELINE_BASE.parse,
+        PIPELINE_BASE.resolve,
+        PIPELINE_BASE.weather,
+        PIPELINE_BASE.consensus,
+        PIPELINE_BASE.rules,
+        PIPELINE_BASE.write,
+      ],
+    },
     map: {
-      center: { name: "Da Nang - Son Tra Coastal Waters", latitude: 16.0544, longitude: 108.2022 },
+      title: "Storm Cell, Fri Afternoon",
+      center: [16.04, 108.19],
+      zoom: 11,
       markers: [
-        { id: "alert-1", label: "📡 Radar 48855", latitude: 16.1200, longitude: 108.2800, title: "Son Tra WMO Doppler Radar", description: "Himawari-9 satellite & radar surveillance active 24/7", temperature_c: 29.0, weather_condition: "Monitoring Axis" },
-        { id: "alert-2", label: "⚓ Maritime Berth", latitude: 16.1286, longitude: 108.2215, title: "Tien Sa Seaport & Fleet Berth", description: "Force 4-5 winds, 1.2m waves - Maritime advisory broadcast", temperature_c: 30.0, weather_condition: "Sea Breeze" },
-        { id: "alert-3", label: "🏖️ My Khe Sentry", latitude: 16.0580, longitude: 108.2480, title: "My Khe Coastal Lifeguard Post", description: "Wave height 1.2 - 1.6m, nearshore swimming safe with flags", temperature_c: 31.0, weather_condition: "Normal Coastal" }
-      ]
+        { id: "beach", lat: 16.0481, lon: 108.2478, label: "B", title: "My Khe Beach", detail: `No swimming Fri ${hh(seaWindHours[0])}–${hh(seaWindHours[seaWindHours.length - 1] + 1)}`, tone: "caution" },
+        { id: "port", lat: 16.1286, lon: 108.2215, label: "P", title: "Tien Sa Port", detail: "Small-craft advisory Fri afternoon", tone: "caution" },
+      ],
+      zones: [{ lat: 16.02, lon: 108.15, radius_m: 12000, label: `Thunderstorm cell · Fri ${storm}`, tone: "alert" }],
+      legend: [
+        { label: "Advisory point", tone: "caution", shape: "dot" },
+        { label: "Storm cell", tone: "alert", shape: "zone" },
+      ],
     },
-    insights: [
-      {
-        title: "South China Sea Trough Tracking",
-        body: "Himawari-9 satellite infrared imagery indicates the 12-15°N trough is tracking slowly westward with no intensification into a tropical depression within 120 hours.",
-        type: "wind"
-      },
-      {
-        title: "Nearshore Wave Forecasting (SWAN Model)",
-        body: "Significant wave height (Hs) at My Khe Beach ranges between 0.8 - 1.4m, supporting water recreational activities during daytime.",
-        type: "general"
-      }
-    ]
   };
 
   return {
-    session_id: "demo-session-severe-alert",
+    session_id: "demo-severe",
     status: "success",
     response_type: "weather_prediction",
     domain: "severe_weather",
-    location: "Da Nang Coastal Waters & Son Tra Peninsula",
-    prediction: "No direct storm impact on Da Nang mainland over the next 5-7 days. Stable daytime weather with brief evening showers.",
-    recommendation: "Tourism, industrial, and construction operations proceed normally. Offshore vessels maintain scheduled maritime VHF watch.",
-    risk_assessment: {
-      rain_risk: "Medium",
-      wind_risk: "Medium",
-      heat_risk: "Medium",
-      overall_risk: "Medium"
-    },
-    weather_stats: {
-      avg_temperature_c: 30.5,
-      min_temperature_c: 25.0,
-      max_temp: 34.0,
-      max_rain_prob: 65,
-      max_wind_speed: 28.0,
-      total_rainfall_mm: 36.0
-    },
-    time_range: {
-      start: "2026-09-08",
-      end: "2026-09-14",
-      raw_text: "7-Day Coastal Horizon"
-    },
-    weather_path: "Path-A (High-Resolution NWP & Himawari Satellite Tracking)",
-    weather_confidence: 0.97,
-    weather_mode: "standard_multi_agent",
-    sources_used: ["National Center for Hydro-Meteorological Forecasting (NCHMF)", "JMA Himawari-9 Satellite", "ECMWF Coastal Wave Model"],
-    tech_stack_info,
-    weather_view,
-    coordinates: { latitude: 16.0544, longitude: 108.2022 }
+    location: report.location,
+    coordinates: { latitude: 16.0544, longitude: 108.2022 },
+    report,
   };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 5. SMART QUERY ROUTER
+// 5. ROUTER — showcase prompts first, then keywords
 // ─────────────────────────────────────────────────────────────────────────────
+
+const has = (q: string, words: string[]) => words.some((w) => q.includes(w));
+
 export function routeMockQuery(query: string): ChatResult {
-  const q = (query || "").toLowerCase();
+  const q = (query || "").toLowerCase().replace(/\s+/g, " ").trim();
 
-  // 1. Construction / Concrete / Crane / Safety
-  if (
-    q.includes("construct") ||
-    q.includes("xây dựng") ||
-    q.includes("bê tông") ||
-    q.includes("concrete") ||
-    q.includes("cẩu") ||
-    q.includes("crane") ||
-    q.includes("công trường") ||
-    q.includes("giàn giáo") ||
-    q.includes("đổ bê tông") ||
-    q.includes("pour") ||
-    q.includes("curing") ||
-    q.includes("scaffold")
-  ) {
-    return getConstructionMockResponse(query);
+  if (q === SHOWCASE_PROMPTS.tourism.toLowerCase()) return getTourismMockResponse();
+  if (q === SHOWCASE_PROMPTS.construction.toLowerCase()) return getConstructionMockResponse();
+  if (q === SHOWCASE_PROMPTS.agriculture.toLowerCase()) return getAgricultureMockResponse();
+  if (q === SHOWCASE_PROMPTS.severe_weather.toLowerCase()) return getSevereWeatherMockResponse();
+
+  if (has(q, ["construct", "concrete", "pour", "slab", "crane", "scaffold", "curing", "overpass", "site", "xây dựng", "bê tông", "cẩu", "công trường", "giàn giáo"])) {
+    return getConstructionMockResponse();
   }
-
-  // 2. Agriculture / Irrigation / Farming / Crops
-  if (
-    q.includes("agri") ||
-    q.includes("nông nghiệp") ||
-    q.includes("irrigate") ||
-    q.includes("tưới") ||
-    q.includes("lúa") ||
-    q.includes("farm") ||
-    q.includes("ruộng") ||
-    q.includes("hòa vang") ||
-    q.includes("hoa vang") ||
-    q.includes("bón phân") ||
-    q.includes("đạo ôn") ||
-    q.includes("crop") ||
-    q.includes("harvest") ||
-    q.includes("evapotranspiration") ||
-    q.includes("fertilizer")
-  ) {
-    return getAgricultureMockResponse(query);
+  if (has(q, ["agri", "farm", "rice", "paddy", "irrigat", "urea", "fertiliz", "spray", "blast", "crop", "harvest", "hoa vang", "hòa vang", "nông nghiệp", "tưới", "lúa", "ruộng", "bón phân", "đạo ôn"])) {
+    return getAgricultureMockResponse();
   }
-
-  // 3. Severe weather / Storm / Typhoon / Alert
-  if (
-    q.includes("storm") ||
-    q.includes("bão") ||
-    q.includes("severe") ||
-    q.includes("typhoon") ||
-    q.includes("alert") ||
-    q.includes("cảnh báo") ||
-    q.includes("lốc") ||
-    q.includes("ngập") ||
-    q.includes("lũ") ||
-    q.includes("warning") ||
-    q.includes("disaster") ||
-    q.includes("wave")
-  ) {
-    return getSevereWeatherMockResponse(query);
+  if (has(q, ["storm", "severe", "typhoon", "alert", "warning", "disaster", "flood", "bão", "cảnh báo", "lốc", "ngập", "lũ"])) {
+    return getSevereWeatherMockResponse();
   }
-
-  // 4. Tourism / Travel / Itinerary / Trip
-  if (
-    q.includes("trip") ||
-    q.includes("tour") ||
-    q.includes("du lịch") ||
-    q.includes("hành trình") ||
-    q.includes("chơi") ||
-    q.includes("lịch trình") ||
-    q.includes("hội an") ||
-    q.includes("sơn trà") ||
-    q.includes("bà nà") ||
-    q.includes("my khe") ||
-    q.includes("mỹ khê") ||
-    q.includes("itinerary") ||
-    q.includes("plan") ||
-    q.includes("visit") ||
-    q.includes("beach") ||
-    q.includes("hotel")
-  ) {
-    return getTourismMockResponse(query);
-  }
-
-  // Default fallback: Tourism Da Nang demo
-  return getTourismMockResponse(query);
+  return getTourismMockResponse();
 }
-

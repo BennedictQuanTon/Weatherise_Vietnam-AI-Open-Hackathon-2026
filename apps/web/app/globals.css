@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Allura&family=Playfair+Display:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Allura&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -323,3 +323,126 @@ html.light .glass-panel:hover:not(:disabled) {
     inset 0 1px 0 rgba(255, 255, 255, 0.02);
 }
 
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Result report — design tokens (Geist, shadow-as-border, burgundy alerts)
+   Scoped to .report so the home dashboard keeps its own look.
+   ───────────────────────────────────────────────────────────────────────── */
+.report {
+  --r-bg: #ffffff;
+  --r-page: #fafafa;
+  --r-subtle: #f5f5f5;
+  --r-fg: #171717;
+  --r-fg2: #4d4d4d;
+  --r-muted: #6b6b6b;
+  --r-hair: #ebebeb;
+  --r-grid: #f0f0f0;
+  --r-ring: 0 0 0 1px rgba(0, 0, 0, 0.08), 0 2px 2px rgba(0, 0, 0, 0.04);
+  --r-ring-strong: 0 0 0 1px rgba(0, 0, 0, 0.14), 0 4px 8px rgba(0, 0, 0, 0.06);
+  --r-focus: hsla(212, 100%, 48%, 1);
+  --r-accent: #0a72ef;
+  --r-accent-soft: #ebf3fe;
+  --r-series: #0a72ef;
+  --r-ink-series: #171717;
+  --r-ok: #17703f;
+  --r-ok-soft: #edf7f1;
+  --r-ok-band: rgba(23, 112, 63, 0.09);
+  --r-caution: #9a5b00;
+  --r-caution-soft: #fff6e5;
+  --r-caution-band: rgba(154, 91, 0, 0.08);
+  --r-alert: #8a1c2b;
+  --r-alert-soft: #fbf1f2;
+  --r-alert-band: rgba(138, 28, 43, 0.09);
+  --r-neutral: #6b6b6b;
+  --r-neutral-soft: #f2f2f2;
+  font-family: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-feature-settings: "liga";
+  color: var(--r-fg);
+  -webkit-font-smoothing: antialiased;
+}
+
+html.dark .report {
+  --r-bg: #0a0a0a;
+  --r-page: #000000;
+  --r-subtle: #111111;
+  --r-fg: #ededed;
+  --r-fg2: #c7c7c7;
+  --r-muted: #a1a1a1;
+  --r-hair: #242424;
+  --r-grid: #1c1c1c;
+  --r-ring: 0 0 0 1px rgba(255, 255, 255, 0.12);
+  --r-ring-strong: 0 0 0 1px rgba(255, 255, 255, 0.2);
+  --r-focus: hsla(212, 100%, 60%, 1);
+  --r-accent: #3291ff;
+  --r-accent-soft: #0d2440;
+  --r-series: #3291ff;
+  --r-ink-series: #ededed;
+  --r-ok: #4ade80;
+  --r-ok-soft: #0f2a1a;
+  --r-ok-band: rgba(74, 222, 128, 0.1);
+  --r-caution: #f5b445;
+  --r-caution-soft: #2d2106;
+  --r-caution-band: rgba(245, 180, 69, 0.1);
+  --r-alert: #f0a5ae;
+  --r-alert-soft: #2a1116;
+  --r-alert-band: rgba(240, 165, 174, 0.12);
+  --r-neutral: #a1a1a1;
+  --r-neutral-soft: #1a1a1a;
+}
+
+.report .font-mono { font-family: 'Geist Mono', ui-monospace, SFMono-Regular, monospace; }
+.report .tnum { font-variant-numeric: tabular-nums; }
+.report .balance { text-wrap: balance; }
+
+.report [data-tone="ok"] { --tone: var(--r-ok); --tone-soft: var(--r-ok-soft); --tone-band: var(--r-ok-band); }
+.report [data-tone="caution"] { --tone: var(--r-caution); --tone-soft: var(--r-caution-soft); --tone-band: var(--r-caution-band); }
+.report [data-tone="alert"] { --tone: var(--r-alert); --tone-soft: var(--r-alert-soft); --tone-band: var(--r-alert-band); }
+.report [data-tone="neutral"] { --tone: var(--r-neutral); --tone-soft: var(--r-neutral-soft); --tone-band: transparent; }
+
+.r-card {
+  background: var(--r-bg);
+  box-shadow: var(--r-ring);
+  border-radius: 12px;
+}
+.r-well {
+  background: var(--r-subtle);
+  border-radius: 8px;
+}
+.r-focus:focus-visible {
+  outline: 2px solid var(--r-focus);
+  outline-offset: 2px;
+}
+.r-btn {
+  transition-property: background-color, color, box-shadow;
+  transition-duration: 150ms;
+}
+
+.report .leaflet-container {
+  font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  background: var(--r-subtle);
+}
+.report .leaflet-popup-content-wrapper,
+.report .leaflet-tooltip {
+  border-radius: 8px;
+  box-shadow: var(--r-ring-strong);
+  border: 0;
+}
+
+@keyframes r-skeleton {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.r-skeleton {
+  background: var(--r-subtle);
+  border-radius: 6px;
+  animation: r-skeleton 1.6s ease-in-out infinite;
+}
+@keyframes r-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.r-fade-in { animation: r-fade-in 240ms ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .r-skeleton, .r-fade-in { animation: none; }
+}
