@@ -447,3 +447,147 @@ html.dark .report {
 @media (prefers-reduced-motion: reduce) {
   .r-skeleton, .r-fade-in { animation: none; }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Landing page — DESIGN.md tokens (system-ui type, white / snow-gray rhythm,
+   pill buttons, ambient shadow). Palette: white, blue, green, light orange.
+   ───────────────────────────────────────────────────────────────────────── */
+.landing {
+  --l-ink: #101010;
+  --l-black: #000000;
+  --l-smoke: #6e6e73;
+  --l-pewter: #ababb0;
+  --l-silver: #d0d0d3;
+  --l-mist: #f0f0f0;
+  --l-snow: #f5f5f7;
+  --l-white: #ffffff;
+  --l-charcoal: #272727;
+  --l-blue: #0088ff;
+  --l-blue-hover: #1c95ff;
+  --l-green: #34c759;
+  --l-orange: #f06413;
+  --l-honey: #feab30;
+  --l-shadow: rgba(16, 16, 16, 0.1) 0px 0px 30px 0px;
+  --l-brand: linear-gradient(90deg, #0088ff 0%, #12a7c6 55%, #34c759 100%);
+  --l-amber: linear-gradient(0deg, rgb(240, 100, 19) -29.375%, rgb(254, 171, 48) 100%);
+  --l-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  font-family: system-ui, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--l-ink);
+  background: var(--l-white);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "liga";
+}
+.landing .tnum { font-variant-numeric: tabular-nums; }
+
+/* Type scale (DESIGN.md), tightened on small screens */
+.l-display { font-size: clamp(44px, 7.2vw, 80px); line-height: 1; letter-spacing: -0.013em; font-weight: 700; text-wrap: balance; }
+.l-heading-lg { font-size: clamp(34px, 5vw, 54px); line-height: 1.04; letter-spacing: -0.013em; font-weight: 700; text-wrap: balance; }
+.l-heading { font-size: clamp(28px, 3.6vw, 40px); line-height: 1.1; letter-spacing: -0.006em; font-weight: 600; text-wrap: balance; }
+.l-heading-sm { font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em; }
+.l-sub { font-size: 18px; line-height: 1.55; color: var(--l-smoke); text-wrap: pretty; }
+.l-body { font-size: 16px; line-height: 24px; color: var(--l-smoke); text-wrap: pretty; }
+.l-caption { font-size: 14px; line-height: 18px; letter-spacing: -0.41px; color: var(--l-smoke); }
+.l-eyebrow { font-size: 15px; line-height: 20px; font-weight: 600; letter-spacing: 0.02em; color: var(--l-smoke); }
+
+.l-gradient-text { background: var(--l-brand); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.l-amber-text { background: var(--l-amber); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+.l-container { width: 100%; max-width: 1200px; margin: 0 auto; padding-left: 20px; padding-right: 20px; }
+.l-section { padding-top: clamp(80px, 11vw, 120px); padding-bottom: clamp(80px, 11vw, 120px); }
+.l-snow { background: var(--l-snow); }
+
+.l-card { background: var(--l-white); border-radius: 20px; box-shadow: var(--l-shadow); }
+
+/* Pill buttons */
+.l-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 100px; font-weight: 600; font-size: 16px; line-height: 24px;
+  transition: background-color 180ms var(--l-ease), color 180ms var(--l-ease), box-shadow 180ms var(--l-ease), transform 180ms var(--l-ease);
+}
+.l-btn:focus-visible { outline: 2px solid var(--l-blue); outline-offset: 3px; }
+.l-btn-primary { background: var(--l-blue); color: #fff; padding: 10px 22px; }
+.l-btn-primary:hover { background: var(--l-blue-hover); transform: translateY(-1px); }
+.l-btn-ghost { padding: 9px 26px; box-shadow: inset 0 0 0 1.5px var(--l-ink); color: var(--l-ink); }
+.l-btn-ghost:hover { background: var(--l-ink); color: #fff; }
+.l-link:focus-visible { outline: 2px solid var(--l-blue); outline-offset: 3px; border-radius: 6px; }
+
+/* Reveal on scroll */
+.l-reveal { opacity: 0; transform: translateY(28px); transition: opacity 900ms var(--l-ease), transform 900ms var(--l-ease); }
+.l-reveal.is-in { opacity: 1; transform: none; }
+.l-reveal-scale { opacity: 0; transform: scale(0.94); transition: opacity 900ms var(--l-ease), transform 1100ms var(--l-ease); }
+.l-reveal-scale.is-in { opacity: 1; transform: none; }
+.l-mask { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: 0.08em; }
+.l-mask > span { display: inline-block; transform: translateY(105%); transition: transform 1000ms var(--l-ease); }
+.is-in .l-mask > span, .l-mask.is-in > span { transform: none; }
+
+/* Logo marquee */
+@keyframes l-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.l-marquee { background: var(--l-snow); mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); }
+.l-marquee-track { display: flex; width: max-content; background: var(--l-snow); animation: l-marquee 38s linear infinite; }
+.l-marquee:hover .l-marquee-track { animation-play-state: paused; }
+.l-logo { filter: grayscale(1) contrast(1.1); opacity: 0.55; mix-blend-mode: multiply; transition: filter 300ms, opacity 300ms; }
+.l-logo:hover { filter: none; opacity: 1; }
+
+/* Floating chips in the hero */
+@keyframes l-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.l-float { animation: l-float 6s ease-in-out infinite; }
+
+/* Shimmer inside gradient text (award) */
+@keyframes l-shimmer { from { background-position: 0% 50%; } to { background-position: 200% 50%; } }
+.l-shimmer {
+  background: linear-gradient(90deg, #0088ff, #12a7c6, #34c759, #12a7c6, #0088ff);
+  background-size: 200% auto; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: l-shimmer 6s linear infinite;
+}
+
+/* Rain streaks for the problem art */
+@keyframes l-rain { from { transform: translateY(-40px); opacity: 0; } 20% { opacity: 0.9; } to { transform: translateY(160px); opacity: 0; } }
+.l-rain line { animation: l-rain 1.1s linear infinite; }
+@keyframes l-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+.l-pulse { animation: l-pulse 1.8s ease-in-out infinite; }
+@keyframes l-dash { to { stroke-dashoffset: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .l-reveal, .l-reveal-scale, .l-mask > span { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .l-marquee-track, .l-float, .l-shimmer, .l-rain line, .l-pulse { animation: none !important; }
+}
+
+/* ── Landing motion, round 2 ─────────────────────────────────────────── */
+@keyframes l-device-in {
+  from { opacity: 0; transform: var(--from, translate3d(0, 30px, 0)) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.l-device-in { opacity: 0; animation: l-device-in 1200ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+.l-dots { background-image: radial-gradient(rgba(16,16,16,0.07) 1px, transparent 1px); background-size: 18px 18px; }
+
+.l-spotlight { position: relative; isolation: isolate; }
+.l-spotlight::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; z-index: -1; pointer-events: none;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), var(--spot), transparent 65%);
+  opacity: 0; transition: opacity 400ms;
+}
+.l-spotlight:hover::before { opacity: 1; }
+
+.l-tilt { transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1); transform-style: preserve-3d; will-change: transform; }
+.l-tilt .l-sheen {
+  background: radial-gradient(500px circle at var(--sx, 50%) var(--sy, 0%), rgba(255,255,255,0.35), transparent 45%);
+  opacity: var(--sheen, 0); transition: opacity 400ms;
+}
+
+@keyframes l-marquee-rev { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+.l-marquee-rev { animation-name: l-marquee-rev; }
+.l-marquee-plain { mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+.l-marquee-plain .l-marquee-track { background: transparent; }
+.l-marquee-plain:hover .l-marquee-track { animation-play-state: paused; }
+
+@keyframes l-spin { to { transform: rotate(360deg); } }
+.l-ring { animation: l-spin 8s linear infinite; }
+@keyframes l-ping { from { transform: scale(1); opacity: 0.55; } to { transform: scale(2.2); opacity: 0; } }
+.l-ping { animation: l-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .l-device-in { animation: none !important; opacity: 1 !important; }
+  .l-tilt { transition: none !important; }
+  .l-ring, .l-ping, .l-marquee-rev { animation: none !important; }
+}

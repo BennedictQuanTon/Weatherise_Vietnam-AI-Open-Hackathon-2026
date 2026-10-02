@@ -12,6 +12,7 @@ import { SHOWCASE_PROMPTS } from "@/lib/report/prompts";
 import ReportView from "@/components/report/ReportView";
 import ReportLoading from "@/components/report/ReportLoading";
 import { LegacyResult, convertTripViewToPlan, type LegacyChatResult } from "@/components/legacy/LegacyResult";
+import { newRunId, saveRun, type RunTrace } from "@/lib/trace";
 
 // Leaflet needs window, so both maps load client-side only.
 const MapLoading = () => <div className="r-skeleton h-full w-full rounded-none" />;
@@ -37,6 +38,18 @@ const SHOWCASE_CHIPS: { key: keyof typeof SHOWCASE_PROMPTS; label: string; domai
 ];
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// URL state: showcase questions use a short key (?q=construction), anything else the full text.
+const SHOWCASE_KEYS = Object.keys(SHOWCASE_PROMPTS) as (keyof typeof SHOWCASE_PROMPTS)[];
+const toUrlParam = (q: string) => SHOWCASE_KEYS.find((k) => SHOWCASE_PROMPTS[k] === q) ?? q;
+const fromUrlParam = (v: string) => (SHOWCASE_PROMPTS as Record<string, string>)[v] ?? v;
+
+function setUrlQuery(q: string | null) {
+  const url = new URL(window.location.href);
+  if (q) url.searchParams.set("q", toUrlParam(q));
+  else url.searchParams.delete("q");
+  window.history.pushState(null, "", url);
+}
 
 // ─── Types ─────────────────────────────────────────────────
 interface CityWeather {
@@ -222,7 +235,8 @@ export default function HomePage() {
 
   // Demo mode: the answer comes from /api/chat (mock engine); the pipeline steps
   // are then replayed so the viewer sees each agent run before the report appears.
-  const sendMessage = async (text: string) => {
+  // `replay: false` (restoring from the URL) shows the report at once, skipping the step animation.
+  const sendMessage = async (text: string, { replay = true, pushUrl = true } = {}) => {
     const q = text.trim();
     if (!q || loading) return;
     setLoading(true);
@@ -232,6 +246,11 @@ export default function HomePage() {
     setActiveDay(1);
     setPipeline(DEFAULT_PIPELINE);
     setDone(0);
+    if (pushUrl) setUrlQuery(q);
+
+    // Every question is traced for the Monitor (persisted + broadcast to other tabs).
+    const run: RunTrace = { id: newRunId(), question: q, source: "app", startedAt: Date.now(), status: "running", steps: [] };
+    saveRun(run);
 
     let data: ChatResult;
     try {
@@ -244,20 +263,49 @@ export default function HomePage() {
       data = await r.json();
     } catch (err) {
       console.error("Chat error:", err);
+      saveRun({ ...run, status: "error", error: String(err) });
       setLatestResult({ error: "Weatherise couldn't reach the answer service. Check your connection, then send the question again." });
       setLoading(false);
       return;
     }
 
-    const steps = data.report?.sources.pipeline ?? DEFAULT_PIPELINE;
+    const report = data.report;
+    const steps = report?.sources.pipeline ?? DEFAULT_PIPELINE;
     setPipeline(steps);
+    run.domain = report?.domain ?? data.domain;
+    run.title = report?.title;
     for (let i = 0; i < steps.length; i++) {
-      await sleep(Math.min(360, steps[i].ms * 0.8));
+      if (replay) await sleep(Math.min(200, steps[i].ms * 0.45));
+      run.steps = [...run.steps, { ...steps[i], at: Date.now() }];
+      saveRun(run);
       setDone(i + 1);
     }
+    saveRun({
+      ...run,
+      status: "done",
+      totalMs: steps.reduce((a, b) => a + b.ms, 0),
+      verdict: report ? { label: report.verdict.label, headline: report.verdict.headline, tone: report.verdict.tone } : undefined,
+      alerts: report?.alerts.map((a) => ({ title: a.title, window: a.window, tone: a.tone })),
+    });
     setLatestResult(data);
     setLoading(false);
   };
+
+  // Restore the answer from the URL on load and on Back/Forward.
+  useEffect(() => {
+    const restore = () => {
+      const v = new URL(window.location.href).searchParams.get("q");
+      if (v) sendMessage(fromUrlParam(v), { replay: false, pushUrl: false });
+      else {
+        setLatestResult(null);
+        setQuery("");
+      }
+    };
+    restore();
+    window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -267,6 +315,7 @@ export default function HomePage() {
   };
 
   const resetToHome = () => {
+    setUrlQuery(null);
     setLatestResult(null);
     setLoading(false);
     setDone(0);

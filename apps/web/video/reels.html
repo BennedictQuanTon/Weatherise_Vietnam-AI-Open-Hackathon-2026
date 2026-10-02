@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Weatherise feature reels</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* Product-UI tokens (same as the app's report view). Stage: 1280×720, scaled to 1080p by the renderer. */
+  :root {
+    --bg: #fafafa; --card: #fff; --fg: #171717; --fg2: #4d4d4d; --muted: #6b6b6b; --hair: #ebebeb; --subtle: #f5f5f5;
+    --ring: 0 0 0 1px rgba(0,0,0,0.08), 0 2px 2px rgba(0,0,0,0.04);
+    --lift: 0 0 0 1px rgba(0,0,0,0.06), 0 18px 40px rgba(16,16,16,0.10);
+    --accent: #0a72ef; --accent-soft: #ebf3fe;
+    --ok: #17703f; --ok-soft: #edf7f1; --caution: #9a5b00; --caution-soft: #fff6e5; --alert: #8a1c2b; --alert-soft: #fbf1f2;
+    --green: #34c759; --orange: #f06413;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+  #stage {
+    position: relative; width: 1280px; height: 720px; transform: scale(1.5); transform-origin: 0 0;
+    font-family: Geist, system-ui, sans-serif; color: var(--fg); -webkit-font-smoothing: antialiased;
+    background: radial-gradient(70% 60% at 50% 0%, rgba(10,114,239,0.07), transparent 70%), var(--bg);
+    overflow: hidden;
+  }
+  .abs { position: absolute; }
+  .card { background: var(--card); border-radius: 16px; box-shadow: var(--lift); }
+  .mono { font-family: "Geist Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .label { font-size: 13px; color: var(--muted); }
+  .chip { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 7px 14px; font-size: 15px; font-weight: 500; background: var(--subtle); color: var(--fg); white-space: nowrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 6px 14px; font-size: 15px; font-weight: 600; }
+  .ok { background: var(--ok-soft); color: var(--ok); }
+  .alert { background: var(--alert-soft); color: var(--alert); }
+  .caution { background: var(--caution-soft); color: var(--caution); }
+  .accent { background: var(--accent-soft); color: var(--accent); }
+  .brand { position: absolute; left: 36px; top: 28px; display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 600; }
+  .brand img { width: 26px; height: 26px; }
+  .caption { position: absolute; right: 36px; top: 30px; font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+// ── Timeline helpers ─────────────────────────────────────────────────────
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const easeOut = (p) => 1 - Math.pow(1 - p, 4);
+const easeInOut = (p) => (p < 0.5 ? 8 * p ** 4 : 1 - Math.pow(-2 * p + 2, 4) / 2);
+const spring = (p) => { if (p <= 0) return 0; if (p >= 1) return 1; return 1 - Math.exp(-7 * p) * Math.cos(9 * p); };
+const prog = (t, start, dur) => clamp((t - start) / dur);
+const lerp = (a, b, p) => a + (b - a) * p;
+const $ = (html) => { const d = document.createElement("div"); d.innerHTML = html.trim(); return d.firstChild; };
+const stage = document.getElementById("stage");
+function put(html, x, y, extra = "") { const el = $(html); el.classList.add("abs"); el.style.left = x + "px"; el.style.top = y + "px"; if (extra) el.style.cssText += extra; stage.appendChild(el); return el; }
+/** Fade + slide + scale in. */
+function enter(el, t, start, dur = 0.6, { dy = 18, dx = 0, scale = 1, fn = easeOut } = {}) {
+  const p = fn(prog(t, start, dur));
+  el.style.opacity = p;
+  el.style.transform = `translate(${(1 - p) * dx}px, ${(1 - p) * dy}px) scale(${lerp(scale, 1, p)})`;
+  return p;
+}
+function popIn(el, t, start, dur = 0.55) { return enter(el, t, start, dur, { dy: 0, scale: 0.6, fn: spring }); }
+function exitEl(el, t, start, dur = 0.5, dx = 0, dy = -16) { const p = easeInOut(prog(t, start, dur)); if (p > 0) { el.style.opacity = 1 - p; el.style.transform = `translate(${dx * p}px, ${dy * p}px)`; } return p; }
+
+const brand = () => { stage.appendChild($(`<div class="brand"><img src="../public/favicon.svg" alt="">Weatherise</div>`)); };
+const caption = (txt) => stage.appendChild($(`<div class="caption">${txt}</div>`));
+
+// ── Reel 1: Ask in Plain Language ────────────────────────────────────────
+const PROMPT = "We plan to pour the deck slab at Hoa Lien Overpass on Friday morning and run the tower crane all day. Is Friday safe? If not, when is the best pour window this week, and when must the crane stop?";
+const reels = {};
+reels.ask = {
+  duration: 11,
+  build() {
+    brand(); caption("Ask in plain language");
+    this.box = put(`<div class="card" style="width:840px;padding:22px 26px"><div class="label" style="margin-bottom:10px">Ask Weatherise</div><div id="typed" style="font-size:22px;line-height:1.45;min-height:96px;font-weight:500"></div><div style="display:flex;justify-content:flex-end;margin-top:8px"><div id="send" style="width:40px;height:40px;border-radius:10px;background:var(--fg);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px">↑</div></div></div>`, 220, 120);
+    this.typed = this.box.querySelector("#typed"); this.send = this.box.querySelector("#send");
+    const fields = [["Domain", "Construction"], ["Site", "Hoa Lien Interchange Overpass"], ["Planned", "Fri, Jun 12 · morning"], ["Work", "Deck slab pour · Tower crane"]];
+    this.fields = fields.map(([k, v], i) => put(`<div class="card" style="padding:14px 18px;width:300px;height:84px"><div class="label">${k}</div><div style="font-size:17px;font-weight:600;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v}</div></div>`, 100 + (i % 2) * 316, 380 + Math.floor(i / 2) * 100));
+    const qs = ["Is Friday safe?", "Best pour window", "Crane stop hours"];
+    this.qhead = put(`<div class="label" style="font-weight:500">Your questions</div>`, 768, 382);
+    this.qs = qs.map((q, i) => put(`<div class="card" style="padding:12px 16px;width:420px;display:flex;align-items:center;gap:12px"><span class="mono" style="font-size:13px;padding:3px 8px;border-radius:999px;background:var(--subtle);box-shadow:var(--ring)">Q${i + 1}</span><span style="font-size:18px;font-weight:600">${q}</span></div>`, 768, 408 + i * 64));
+    const steps = ["Parse Request", "Resolve Place & Dates", "Load Site Profile", "Fetch Weather"];
+    this.steps = steps.map((s, i) => put(`<div class="chip" style="background:#fff;box-shadow:var(--ring)"><span style="color:var(--ok)">✓</span>${s}</div>`, 100 + i * 270, 640));
+  },
+  render(t) {
+    const tp = prog(t, 0.6, 3.6);
+    const n = Math.round(PROMPT.length * tp);
+    this.typed.innerHTML = PROMPT.slice(0, n) + (t < 4.4 ? `<span style="display:inline-block;width:2px;height:24px;background:var(--accent);vertical-align:-4px;opacity:${Math.floor(t * 2.5) % 2 ? 1 : 0.15}"></span>` : "");
+    enter(this.box, t, 0, 0.6);
+    const press = prog(t, 4.3, 0.25);
+    this.send.style.transform = `scale(${1 - Math.sin(press * Math.PI) * 0.18})`;
+    this.send.style.background = t > 4.3 ? "var(--accent)" : "var(--fg)";
+    // box shrinks upward to make room
+    const lift = easeInOut(prog(t, 4.6, 0.7));
+    this.box.style.transform += ` translateY(${-60 * lift}px) scale(${1 - 0.06 * lift})`;
+    this.fields.forEach((f, i) => popIn(f, t, 5.0 + i * 0.32));
+    enter(this.qhead, t, 6.3, 0.4);
+    this.qs.forEach((q, i) => enter(q, t, 6.5 + i * 0.4, 0.55, { dx: 30, dy: 0 }));
+    this.steps.forEach((s, i) => enter(s, t, 8.3 + i * 0.32, 0.45, { dy: 14 }));
+  },
+  cues: () => {
+    const c = [];
+    for (let i = 0; i < 26; i++) c.push({ t: 0.65 + i * 0.135, s: "type", v: 0.5 });
+    c.push({ t: 4.3, s: "click", v: 0.9 }, { t: 4.45, s: "whoosh", v: 0.6 });
+    for (let i = 0; i < 4; i++) c.push({ t: 5.0 + i * 0.32, s: "pop", v: 0.6 });
+    for (let i = 0; i < 3; i++) c.push({ t: 6.5 + i * 0.4, s: "tick", v: 0.55 });
+    for (let i = 0; i < 4; i++) c.push({ t: 8.3 + i * 0.32, s: "tick", v: 0.4 });
+    c.push({ t: 9.7, s: "chime", v: 0.7 });
+    return c;
+  },
+};
+
+// ── Reel 2: Seven Sources, One Forecast ──────────────────────────────────
+reels.consensus = {
+  duration: 11,
+  build() {
+    brand(); caption("Seven sources, one forecast");
+    const src = [["Open-Meteo", 74], ["OpenWeatherMap", 78], ["WeatherAPI", 72], ["Tomorrow.io", 76], ["Visual Crossing", 73], ["Stormglass", 77], ["7Timer", 35]];
+    this.head = put(`<div style="font-size:15px;color:var(--muted)">Fri, Jun 12 · 14:00 · rain chance</div>`, 90, 96);
+    this.cards = src.map(([name, v], i) => {
+      const x = 90 + (i % 4) * 280, y = 140 + Math.floor(i / 4) * 150;
+      const el = put(`<div class="card" style="width:256px;padding:18px 20px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;font-weight:600">${name}</span><span class="q" style="font-size:13px;font-weight:600;color:var(--ok);opacity:0">✓ Valid</span></div><div class="tnum" style="font-size:40px;font-weight:700;letter-spacing:-0.03em;margin-top:8px"><span class="v">0</span>%</div></div>`, x, y);
+      el.dataset.x = x; el.dataset.y = y; el.dataset.v = v; return el;
+    });
+    this.out = this.cards[6];
+    this.consensus = put(`<div class="card" style="width:520px;padding:26px 30px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:17px;font-weight:600">Consensus forecast</span><span class="pill accent" style="font-size:13px">Arbiter · Nemotron-3 Super</span></div><div style="display:flex;gap:40px;margin-top:18px"><div><div class="label">Rain chance</div><div class="tnum" style="font-size:52px;font-weight:700;letter-spacing:-0.03em"><span id="cv">0</span>%</div></div><div><div class="label">Peak gust</div><div class="tnum" style="font-size:52px;font-weight:700;letter-spacing:-0.03em"><span id="gv">0</span><span style="font-size:24px"> km/h</span></div></div></div><div style="margin-top:18px"><div style="display:flex;justify-content:space-between;font-size:14px"><span class="label">Source agreement</span><span class="tnum" style="font-weight:600"><span id="ag">0</span>%</span></div><div style="height:8px;border-radius:999px;background:var(--subtle);margin-top:8px;overflow:hidden"><div id="bar" style="height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#0a72ef,#34c759)"></div></div></div></div>`, 380, 330);
+    this.cv = this.consensus.querySelector("#cv"); this.gv = this.consensus.querySelector("#gv"); this.ag = this.consensus.querySelector("#ag"); this.bar = this.consensus.querySelector("#bar");
+  },
+  render(t) {
+    enter(this.head, t, 0.2, 0.5);
+    this.cards.forEach((c, i) => {
+      const s = 0.5 + i * 0.28;
+      popIn(c, t, s);
+      const v = Math.round(+c.dataset.v * easeOut(prog(t, s + 0.1, 0.9)));
+      c.querySelector(".v").textContent = v;
+      const q = c.querySelector(".q");
+      const qp = prog(t, 3.0 + i * 0.12, 0.3);
+      q.style.opacity = qp;
+      if (c === this.out && t > 4.0) { q.textContent = "Outlier · dropped"; q.style.color = "var(--orange)"; c.style.boxShadow = `0 0 0 2px rgba(240,100,19,${clamp((t - 4) * 2)}) , var(--lift)`; }
+    });
+    // outlier leaves
+    exitEl(this.out, t, 5.0, 0.6, 120, 0);
+    // valid sources converge into the consensus card
+    const conv = easeInOut(prog(t, 5.8, 0.9));
+    this.cards.slice(0, 6).forEach((c) => {
+      if (conv > 0) {
+        const dx = (380 + 260 - 128 - +c.dataset.x) * conv, dy = (330 + 120 - 60 - +c.dataset.y) * conv;
+        c.style.transform = `translate(${dx}px, ${dy}px) scale(${1 - 0.5 * conv})`;
+        c.style.opacity = 1 - conv;
+      }
+    });
+    const cp = popIn(this.consensus, t, 6.5, 0.7);
+    if (t < 6.5) this.consensus.style.opacity = 0;
+    const k = easeOut(prog(t, 6.8, 1.6));
+    this.cv.textContent = Math.round(75 * k);
+    this.gv.textContent = Math.round(62 * k);
+    this.ag.textContent = Math.round(92 * k);
+    this.bar.style.width = 92 * k + "%";
+  },
+  cues: () => {
+    const c = [];
+    for (let i = 0; i < 7; i++) c.push({ t: 0.5 + i * 0.28, s: "pop", v: 0.55 });
+    for (let i = 0; i < 7; i++) c.push({ t: 3.0 + i * 0.12, s: "tick", v: 0.35 });
+    c.push({ t: 4.0, s: "alert", v: 0.5 }, { t: 5.0, s: "whoosh", v: 0.55 }, { t: 5.8, s: "whoosh", v: 0.7 }, { t: 6.6, s: "pop", v: 0.7 }, { t: 8.6, s: "chime", v: 0.75 });
+    return c;
+  },
+};
+
+// ── Reel 3: Rules That Know Your Domain ──────────────────────────────────
+const GUST = [13,15,16,18,19,21,22,22,22,21,21,19,17,15,14,14,13,12,12,12,12,12,12,12,13,15,18,21,24,30,42,55,62,58,44,30,24,19,16]; // Thu 06 → Fri 20
+reels.rules = {
+  duration: 11.5,
+  build() {
+    brand(); caption("Rules that know your domain");
+    const W = 720, H = 250, x0 = 60, y0 = 30;
+    const n = GUST.length, sx = (W - 80) / (n - 1), y = (v) => y0 + H - 40 - (v / 70) * (H - 70);
+    const pts = GUST.map((v, i) => `${x0 + i * sx},${y(v)}`).join(" ");
+    const ty = y(60);
+    this.chart = put(`<div class="card" style="width:${W + 40}px;padding:18px 20px">
+      <div style="display:flex;justify-content:space-between"><span style="font-size:16px;font-weight:600">Wind gust <span class="label">(km/h) · Thu 06:00 → Fri 20:00</span></span><span class="label"><span style="display:inline-block;width:16px;height:1.5px;background:var(--alert);vertical-align:4px"></span> Crane halt 60 km/h</span></div>
+      <svg width="${W}" height="${H}" style="display:block;margin-top:8px">
+        <rect id="pour" x="${x0 + 0.5 * sx}" y="${y0}" width="${4 * sx}" height="${H - 70}" fill="rgba(23,112,63,0.10)" opacity="0"/>
+        <rect id="halt" x="${x0 + 30 * sx}" y="${y0}" width="${5 * sx}" height="${H - 70}" fill="rgba(138,28,43,0.12)" opacity="0"/>
+        <text id="pourL" x="${x0 + 0.5 * sx + 4}" y="${y0 - 8}" font-size="12" font-weight="600" fill="#17703f" opacity="0">Pour window</text>
+        <text id="haltL" x="${x0 + 30 * sx + 4}" y="${y0 - 8}" font-size="12" font-weight="600" fill="#8a1c2b" opacity="0">Crane halt</text>
+        <line x1="${x0}" x2="${x0 + (n - 1) * sx}" y1="${ty}" y2="${ty}" stroke="#8a1c2b" stroke-width="1.5"/>
+        <line x1="${x0}" x2="${x0 + (n - 1) * sx}" y1="${y(0)}" y2="${y(0)}" stroke="#ebebeb"/>
+        <polyline id="line" points="${pts}" fill="none" stroke="#171717" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="2000" stroke-dashoffset="2000"/>
+        <circle id="peak" cx="${x0 + 32 * sx}" cy="${y(62)}" r="6" fill="#8a1c2b" opacity="0"/>
+        <circle id="peakR" cx="${x0 + 32 * sx}" cy="${y(62)}" r="6" fill="none" stroke="#8a1c2b" stroke-width="2" opacity="0"/>
+        <text x="${x0}" y="${H - 14}" font-size="12" fill="#6b6b6b" font-weight="600">Thu</text>
+        <text x="${x0 + 18 * sx}" y="${H - 14}" font-size="12" fill="#6b6b6b" font-weight="600">Fri</text>
+      </svg></div>`, 60, 90);
+    this.line = this.chart.querySelector("#line");
+    this.svgEls = ["pour", "halt", "pourL", "haltL", "peak", "peakR"].reduce((o, id) => ((o[id] = this.chart.querySelector("#" + id)), o), {});
+    this.alertBox = put(`<div style="width:430px;padding:14px 18px;border-radius:14px;background:var(--alert-soft);box-shadow:inset 0 0 0 1px rgba(138,28,43,0.3)"><div style="display:flex;gap:12px;align-items:baseline"><span style="font-weight:600;color:var(--alert);font-size:16px">⬢ Crane Halt</span><span class="mono" style="font-size:14px">Fri 12:00–17:00</span></div><div style="font-size:14px;color:var(--fg2);margin-top:4px">Gusts peak at 62 km/h at 14:00 (halt above 60).</div></div>`, 830, 92);
+    const rows = [["Rain chance, 24 h after pour", "75%", "15%"], ["Rain within 4 h of finishing", "Starts 13:00", "None"], ["Humidity during pour", "83–86%", "72–79%"], ["Peak gust (tower crane)", "62 km/h", "22 km/h"], ["Lightning within 10 km", "13:00–17:00", "None"]];
+    this.table = put(`<div class="card" style="width:760px;padding:10px 20px"><div style="display:grid;grid-template-columns:1.6fr 1fr 1fr;font-size:13px;color:var(--muted);padding:8px 0;border-bottom:1px solid var(--hair)"><span>Rule</span><span>Fri (planned)</span><span>Thu (proposed)</span></div>${rows.map((r) => `<div class="row" style="display:grid;grid-template-columns:1.6fr 1fr 1fr;font-size:15px;padding:9px 0;border-bottom:1px solid var(--hair)"><span style="font-weight:500">${r[0]}</span><span class="f" style="opacity:0;color:var(--alert);font-weight:600">⬢ ${r[1]} · Fail</span><span class="th" style="opacity:0;color:var(--ok);font-weight:600">✓ ${r[2]} · Pass</span></div>`).join("")}</div>`, 60, 400);
+    this.fails = [...this.table.querySelectorAll(".f")]; this.passes = [...this.table.querySelectorAll(".th")];
+    this.verdict = put(`<div class="card" style="width:400px;padding:20px 22px;box-shadow:inset 3px 0 0 #8a1c2b, var(--lift)"><span class="pill alert" style="font-size:14px">⬢ Reschedule</span><div style="font-size:21px;font-weight:600;letter-spacing:-0.02em;line-height:1.3;margin-top:12px">Pour Thursday 06:30–10:30. Stop the crane Friday 12:00–17:00.</div></div>`, 848, 430);
+  },
+  render(t) {
+    enter(this.chart, t, 0, 0.6);
+    const d = easeInOut(prog(t, 0.8, 3.4));
+    this.line.setAttribute("stroke-dashoffset", 2000 * (1 - d));
+    const crossed = t > 3.55;
+    this.svgEls.peak.setAttribute("opacity", crossed ? 1 : 0);
+    const r = prog(t, 3.55, 0.9);
+    this.svgEls.peakR.setAttribute("r", 6 + r * 18); this.svgEls.peakR.setAttribute("opacity", crossed ? 1 - r : 0);
+    const bp = easeOut(prog(t, 4.4, 0.6));
+    ["pour", "halt", "pourL", "haltL"].forEach((k) => this.svgEls[k].setAttribute("opacity", bp));
+    enter(this.alertBox, t, 3.7, 0.55, { dx: 30, dy: 0 });
+    enter(this.table, t, 5.0, 0.6);
+    this.fails.forEach((f, i) => { const p = popIn(f, t, 5.6 + i * 0.35, 0.45); f.style.display = "inline-block"; });
+    this.passes.forEach((f, i) => { popIn(f, t, 7.6 + i * 0.22, 0.45); f.style.display = "inline-block"; });
+    enter(this.verdict, t, 9.2, 0.7, { dx: 30, dy: 0 });
+  },
+  cues: () => {
+    const c = [{ t: 0.8, s: "whoosh", v: 0.45 }, { t: 3.55, s: "alert", v: 0.8 }, { t: 4.4, s: "whoosh", v: 0.4 }];
+    for (let i = 0; i < 5; i++) c.push({ t: 5.6 + i * 0.35, s: "thud", v: 0.6 });
+    for (let i = 0; i < 5; i++) c.push({ t: 7.6 + i * 0.22, s: "tick", v: 0.5 });
+    c.push({ t: 9.25, s: "chime", v: 0.75 });
+    return c;
+  },
+};
+
+// ── Reel 4: Plans That Move With the Weather ─────────────────────────────
+reels.replan = {
+  duration: 11.5,
+  build() {
+    brand(); caption("Plans that move with the weather");
+    this.panel = put(`<div class="card" style="width:640px;height:560px;padding:22px 24px"><div style="font-size:13px;color:var(--muted)">Day 2 · Fri, Jun 12</div><div style="font-size:24px;font-weight:600;letter-spacing:-0.03em;margin-top:4px">Marble Mountains &amp; City Center</div><div id="storm" style="margin-top:12px;opacity:0;display:inline-flex" class="pill alert">⬢ Thunderstorm 13:00–17:00 · 75% rain</div></div>`, 60, 90);
+    this.storm = this.panel.querySelector("#storm");
+    const slots = [["07:00", "Ba Mua Mi Quang", "Indoor · Mì Quảng"], ["08:30", "", ""], ["11:30", "Non Nuoc Specialty", "Indoor · Gỏi Cá Nam Ô"], ["13:30", "", ""], ["15:30", "", ""], ["18:30", "Ba Duong Banh Xeo", "Indoor · Bánh Xèo"]];
+    this.slotY = (i) => 214 + i * 66;
+    this.times = slots.map((s, i) => put(`<div class="mono" style="font-size:15px;color:var(--fg2)">${s[0]}</div>`, 90, this.slotY(i) + 14));
+    this.rows = slots.map((s, i) => s[1] ? put(`<div style="width:470px;padding:10px 14px;border-radius:12px;background:var(--subtle)"><div style="font-size:16px;font-weight:600">${s[1]}</div><div style="font-size:13px;color:var(--muted)">${s[2]}</div></div>`, 170, this.slotY(i)) : null);
+    this.marble = put(`<div style="width:470px;padding:10px 14px;border-radius:12px;background:#fff;box-shadow:var(--ring)"><div style="display:flex;justify-content:space-between"><span style="font-size:16px;font-weight:600">Marble Mountains</span><span id="mtag" class="pill caution" style="font-size:12px;padding:3px 10px;opacity:0">Moved from 14:00</span></div><div id="msub" style="font-size:13px;color:var(--muted)">Outdoor · limit rain ≤ 60%</div></div>`, 170, this.slotY(3) + 33);
+    this.mtag = this.marble.querySelector("#mtag"); this.msub = this.marble.querySelector("#msub");
+    this.museum = put(`<div style="width:470px;padding:10px 14px;border-radius:12px;background:var(--accent-soft)"><div style="font-size:16px;font-weight:600">Museum of Cham Sculpture</div><div style="font-size:13px;color:var(--accent)">Indoor · covers the storm</div></div>`, 170, this.slotY(3));
+    this.market = put(`<div style="width:470px;padding:10px 14px;border-radius:12px;background:var(--accent-soft)"><div style="font-size:16px;font-weight:600">Han Market</div><div style="font-size:13px;color:var(--accent)">Indoor · covered market</div></div>`, 170, this.slotY(4));
+    // mini map
+    const pins = [[80, 150], [280, 380], [250, 320], [140, 190], [170, 90], [60, 260]];
+    const path = [0, 1, 2, 3, 4, 5].map((i) => pins[i].join(",")).join(" ");
+    this.map = put(`<div class="card" style="width:500px;height:560px;overflow:hidden;padding:0"><svg width="500" height="560" style="display:block"><rect width="500" height="560" fill="#eef1f4"/><path d="M330 0 C300 120 360 220 320 330 C290 420 330 500 300 560 L500 560 L500 0Z" fill="#dbe9f7"/><path d="M60 0 C90 140 60 300 100 560" stroke="#fff" stroke-width="14" fill="none"/><path d="M0 230 C160 220 260 260 500 250" stroke="#fff" stroke-width="10" fill="none"/>
+      <polyline id="route" points="${path}" transform="translate(40,60)" fill="none" stroke="#171717" stroke-width="3" stroke-dasharray="7 8" stroke-opacity="0.55" pathLength="1000" style="stroke-dasharray:1000;stroke-dashoffset:1000"/>
+      ${pins.map((p, i) => `<g class="pin" transform="translate(${p[0] + 40},${p[1] + 60})" opacity="0"><circle r="15" fill="${i === 1 ? "#17703f" : "#171717"}" stroke="#fff" stroke-width="3"/><text y="5" text-anchor="middle" font-size="13" font-weight="600" fill="#fff" font-family="Geist">${i + 1}</text></g>`).join("")}
+      </svg><div style="position:absolute;left:16px;bottom:16px" class="chip">Route redrawn · 6 stops</div></div>`, 724, 90);
+    this.route = this.map.querySelector("#route"); this.pins = [...this.map.querySelectorAll(".pin")];
+    this.verdict = put(`<div class="card" style="padding:14px 18px;display:flex;gap:12px;align-items:center"><span class="pill ok" style="font-size:14px">✓ Good to Go</span><span style="font-size:16px;font-weight:600">Storm block moved indoors</span></div>`, 744, 110);
+  },
+  render(t) {
+    enter(this.panel, t, 0, 0.6);
+    this.times.forEach((e, i) => enter(e, t, 0.3 + i * 0.08, 0.4));
+    this.rows.forEach((e, i) => e && enter(e, t, 0.35 + i * 0.08, 0.45));
+    // Marble Mountains starts at 14:00 (between 13:30 and 15:30 slots), in the storm
+    enter(this.marble, t, 0.6, 0.45);
+    const sp = enter(this.storm, t, 1.4, 0.5, { scale: 0.8, dy: 0 });
+    const warn = prog(t, 1.9, 0.3);
+    if (t > 1.9 && t < 3.3) { this.marble.style.boxShadow = `0 0 0 2px rgba(240,100,19,${warn})`; this.msub.innerHTML = `<span style="color:var(--orange);font-weight:600">75% rain &gt; 60% limit</span>`; }
+    const mv = easeInOut(prog(t, 3.2, 0.9));
+    const y0 = this.slotY(3) + 33, y1 = this.slotY(1);
+    this.marble.style.top = lerp(y0, y1, mv) + "px";
+    if (t > 3.6) { this.marble.style.boxShadow = "var(--ring)"; this.msub.textContent = "Outdoor · 15% rain at 08:30 ✓"; }
+    this.mtag.style.opacity = prog(t, 4.0, 0.3);
+    popIn(this.museum, t, 4.4); popIn(this.market, t, 4.75);
+    if (t < 4.4) this.museum.style.opacity = 0; if (t < 4.75) this.market.style.opacity = 0;
+    enter(this.map, t, 5.2, 0.6, { dx: 30, dy: 0 });
+    this.route.style.strokeDashoffset = 1000 * (1 - easeInOut(prog(t, 5.8, 2.0)));
+    this.pins.forEach((p, i) => { const k = spring(prog(t, 5.9 + i * 0.32, 0.5)); p.setAttribute("opacity", clamp(k * 1.5)); });
+    enter(this.verdict, t, 8.6, 0.6);
+  },
+  cues: () => {
+    const c = [{ t: 1.4, s: "rain", v: 0.6 }, { t: 1.9, s: "alert", v: 0.55 }, { t: 3.2, s: "whoosh", v: 0.7 }, { t: 4.0, s: "tick", v: 0.5 }, { t: 4.4, s: "pop", v: 0.6 }, { t: 4.75, s: "pop", v: 0.6 }, { t: 5.8, s: "whoosh", v: 0.45 }];
+    for (let i = 0; i < 6; i++) c.push({ t: 5.9 + i * 0.32, s: "tick", v: 0.4 });
+    c.push({ t: 8.65, s: "chime", v: 0.75 });
+    return c;
+  },
+};
+
+// ── Renderer API ──────────────────────────────────────────────────────────
+const params = new URLSearchParams(location.search);
+const reel = reels[params.get("reel") || "ask"];
+reel.build();
+window.REEL = { duration: reel.duration, cues: reel.cues(), render: (t) => reel.render(t) };
+reel.render(+(params.get("t") || 0));
+</script>
+</body>
+</html>

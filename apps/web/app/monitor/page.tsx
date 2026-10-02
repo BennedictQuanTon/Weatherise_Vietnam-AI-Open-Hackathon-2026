@@ -1,18 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, ArrowLeft, Check, Info, Loader2, Moon, OctagonAlert, Radio, Sun, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AlertTriangle, ArrowLeft, Check, ChevronDown, Info, Loader2, Moon, OctagonAlert, Radio, Sun, Trash2 } from "lucide-react";
 import type { Report, Tone } from "@/lib/report/types";
 import { SHOWCASE_PROMPTS } from "@/lib/report/prompts";
-
-interface LogEntry {
-  id: string;
-  ts: number;
-  level: "info" | "warn" | "error" | "success" | "step";
-  service: string;
-  message: string;
-  duration?: number;
-}
+import { clearRuns, loadRuns, newRunId, saveRun, subscribeRuns, type RunTrace } from "@/lib/trace";
 
 interface SvcHealth {
   name: string;
@@ -29,14 +21,6 @@ const SVCS: SvcHealth[] = [
   { name: "API Backend", key: "api", status: "checking" },
 ];
 
-const LEVEL: Record<LogEntry["level"], { label: string; tone: Tone | "accent" }> = {
-  info: { label: "Info", tone: "neutral" },
-  step: { label: "Step", tone: "accent" },
-  success: { label: "Done", tone: "ok" },
-  warn: { label: "Warn", tone: "caution" },
-  error: { label: "Error", tone: "alert" },
-};
-
 const STATUS: Record<SvcHealth["status"], { label: string; tone: Tone }> = {
   ok: { label: "Healthy", tone: "ok" },
   degraded: { label: "Degraded", tone: "caution" },
@@ -44,15 +28,20 @@ const STATUS: Record<SvcHealth["status"], { label: string; tone: Tone }> = {
   checking: { label: "Checking…", tone: "neutral" },
 };
 
+const DOMAIN_LABEL: Record<string, string> = {
+  tourism: "Tourism",
+  construction: "Construction",
+  agriculture: "Agriculture",
+  severe_weather: "Alerts",
+};
+
 const FILTERS: { key: string; label: string }[] = [
   { key: "all", label: "All" },
-  { key: "step", label: "Steps" },
-  { key: "success", label: "Done" },
-  { key: "warn", label: "Warnings" },
+  { key: "tourism", label: "Tourism" },
+  { key: "construction", label: "Construction" },
+  { key: "agriculture", label: "Agriculture" },
+  { key: "severe_weather", label: "Alerts" },
   { key: "error", label: "Errors" },
-  { key: "parser", label: "Parser" },
-  { key: "mcp", label: "MCP" },
-  { key: "rule", label: "Rules" },
 ];
 
 const EXAMPLES: { label: string; prompt: string }[] = [
@@ -69,26 +58,20 @@ const timeFmt = new Intl.DateTimeFormat("en-GB", {
   hour12: false,
   timeZone: "Asia/Ho_Chi_Minh",
 });
+const NB = " ";
+const ms = (v: number) => `${v.toLocaleString("en-US")}${NB}ms`;
+const sleep = (t: number) => new Promise((r) => setTimeout(r, t));
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-// Single steps are slow above 1 s; a whole-pipeline total is slow above 5 s.
-function durationTone(ms: number, service = ""): Tone {
-  const [slow, critical] = service === "Pipeline" ? [5000, 10000] : [1000, 5000];
-  return ms > critical ? "alert" : ms > slow ? "caution" : "neutral";
+// Single steps are slow above 1 s; a whole run is slow above 5 s.
+function durationTone(v: number, total = false): Tone {
+  const [slow, critical] = total ? [5000, 10000] : [1000, 5000];
+  return v > critical ? "alert" : v > slow ? "caution" : "neutral";
 }
 
-function LevelBadge({ level }: { level: LogEntry["level"] }) {
-  const l = LEVEL[level];
-  const cls =
-    l.tone === "accent"
-      ? "bg-[color:var(--r-accent-soft)] text-[color:var(--r-accent)]"
-      : l.tone === "neutral"
-        ? "bg-[color:var(--r-subtle)] text-[color:var(--r-muted)]"
-        : "bg-[color:var(--tone-soft)] text-[color:var(--tone)]";
+function ToneText({ tone, children }: { tone: Tone; children: React.ReactNode }) {
   return (
-    <span data-tone={l.tone === "accent" ? undefined : l.tone} className={`inline-flex w-12 justify-center rounded px-1.5 py-px text-[11px] font-medium ${cls}`}>
-      {l.label}
+    <span data-tone={tone} className={tone === "neutral" ? "" : "text-[color:var(--tone)]"}>
+      {children}
     </span>
   );
 }
@@ -100,6 +83,26 @@ function StatusPill({ status }: { status: SvcHealth["status"] }) {
     <span data-tone={s.tone} className="inline-flex items-center gap-1 text-xs font-medium text-[color:var(--tone)]">
       {status === "checking" ? <Loader2 size={12} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <Icon size={12} aria-hidden="true" />}
       {s.label}
+    </span>
+  );
+}
+
+function RunStatus({ run }: { run: RunTrace }) {
+  if (run.status === "running")
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-[color:var(--r-accent)]">
+        <Loader2 size={12} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> Running
+      </span>
+    );
+  if (run.status === "error")
+    return (
+      <span data-tone="alert" className="inline-flex items-center gap-1 text-xs font-medium text-[color:var(--tone)]">
+        <OctagonAlert size={12} aria-hidden="true" /> Error
+      </span>
+    );
+  return (
+    <span data-tone="ok" className="inline-flex items-center gap-1 text-xs font-medium text-[color:var(--tone)]">
+      <Check size={12} aria-hidden="true" /> Done
     </span>
   );
 }
@@ -116,17 +119,113 @@ function Card({ title, children, className = "", aside }: { title: string; child
   );
 }
 
+function RunCard({ run, open, onToggle }: { run: RunTrace; open: boolean; onToggle: () => void }) {
+  const total = run.totalMs ?? run.steps.reduce((a, b) => a + b.ms, 0);
+  return (
+    <li className="border-b border-[color:var(--r-hair)] last:border-0">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="r-btn r-focus flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-[color:var(--r-subtle)]"
+      >
+        <ChevronDown
+          size={15}
+          aria-hidden="true"
+          className={`mt-0.5 shrink-0 text-[color:var(--r-muted)] transition-transform ${open ? "" : "-rotate-90"}`}
+        />
+        <span className="min-w-0 flex-1">
+          <span className="r-sans line-clamp-2 text-[13px] font-medium leading-snug text-[color:var(--r-fg)]">{run.question}</span>
+          <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[color:var(--r-muted)]">
+            <time className="font-mono tnum" dateTime={new Date(run.startedAt).toISOString()}>
+              {timeFmt.format(run.startedAt)}
+            </time>
+            {run.domain && (
+              <span className="rounded bg-[color:var(--r-subtle)] px-1.5 py-px font-medium text-[color:var(--r-fg2)]">{DOMAIN_LABEL[run.domain] ?? run.domain}</span>
+            )}
+            <span>{run.source === "monitor" ? "Quick Test" : "App"}</span>
+            <span className="tnum">
+              {run.steps.length} steps
+              {total > 0 && (
+                <>
+                  {" · "}
+                  <ToneText tone={durationTone(total, true)}>{ms(total)}</ToneText>
+                </>
+              )}
+            </span>
+          </span>
+        </span>
+        <RunStatus run={run} />
+      </button>
+
+      {open && (
+        <div className="space-y-3 px-4 pb-4 pl-11">
+          <ol className="overflow-hidden rounded-lg shadow-[var(--r-ring)]">
+            {run.steps.map((s, i) => (
+              <li
+                key={`${s.step}-${i}`}
+                className="grid grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-x-3 border-b border-[color:var(--r-hair)] bg-[color:var(--r-bg)] px-3 py-2 text-[13px] last:border-0 md:grid-cols-[22px_minmax(0,1fr)_minmax(0,180px)_80px]"
+              >
+                <span className="font-mono text-xs text-[color:var(--r-muted)] tnum">{String(i + 1).padStart(2, "0")}</span>
+                <span className="min-w-0">
+                  <span className="font-medium text-[color:var(--r-fg)]">{s.step}</span>
+                  <span className="ml-2 text-xs text-[color:var(--r-muted)] md:hidden" translate="no">
+                    {s.agent}
+                  </span>
+                </span>
+                <span className="hidden truncate font-mono text-xs text-[color:var(--r-fg2)] md:block" translate="no">
+                  {s.agent}
+                </span>
+                <span className="text-right font-mono text-xs tnum">
+                  <ToneText tone={durationTone(s.ms)}>{ms(s.ms)}</ToneText>
+                </span>
+              </li>
+            ))}
+            {run.status === "running" && (
+              <li className="flex items-center gap-2 bg-[color:var(--r-bg)] px-3 py-2 text-[13px] text-[color:var(--r-muted)]">
+                <Loader2 size={13} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> Next step…
+              </li>
+            )}
+          </ol>
+
+          {run.verdict && (
+            <p data-tone={run.verdict.tone} className="r-sans text-[13px] leading-relaxed text-[color:var(--r-fg)]">
+              <span className="font-semibold text-[color:var(--tone)]">{run.verdict.label}:</span> {run.verdict.headline}
+            </p>
+          )}
+          {run.alerts && run.alerts.length > 0 && (
+            <ul className="flex flex-wrap gap-1.5">
+              {run.alerts.map((a) => (
+                <li
+                  key={a.title}
+                  data-tone={a.tone}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[color:var(--tone-soft)] px-2.5 py-1 text-xs font-medium text-[color:var(--tone)]"
+                >
+                  {a.tone === "alert" ? <OctagonAlert size={12} aria-hidden="true" /> : <AlertTriangle size={12} aria-hidden="true" />}
+                  {a.title} · {a.window}
+                </li>
+              ))}
+            </ul>
+          )}
+          {run.error && (
+            <p data-tone="alert" className="text-[13px] text-[color:var(--tone)]">
+              {run.error}
+            </p>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
 export default function MonitorPage() {
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [runs, setRuns] = useState<RunTrace[]>([]);
+  const [openId, setOpenId] = useState<string | null>(null);
   const [svcs, setSvcs] = useState<SvcHealth[]>(SVCS);
   const [filter, setFilter] = useState("all");
-  const [autoScroll, setAutoScroll] = useState(true);
-  const [connected, setConnected] = useState(false);
   const [testInput, setTestInput] = useState<string>(SHOWCASE_PROMPTS.construction);
   const [testing, setTesting] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const listRef = useRef<HTMLDivElement>(null);
-  const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     document.title = "Pipeline Monitor · Weatherise";
@@ -142,39 +241,19 @@ export default function MonitorPage() {
     document.documentElement.className = next;
   };
 
-  const push = useCallback((entry: LogEntry) => {
-    setLogs((prev) => [...prev.slice(-800), entry]);
+  // Runs: load what's stored, then follow every update from the app (other tabs) live.
+  useEffect(() => {
+    const apply = (next: RunTrace[]) => {
+      setRuns(next);
+      const latest = next[next.length - 1];
+      if (latest?.status === "running") setOpenId(latest.id);
+    };
+    const initial = loadRuns();
+    setRuns(initial);
+    setOpenId(initial[initial.length - 1]?.id ?? null);
+    return subscribeRuns(apply);
   }, []);
 
-  // Live event stream (SSE).
-  useEffect(() => {
-    let retryTimer: ReturnType<typeof setTimeout>;
-    const connect = () => {
-      esRef.current?.close();
-      const es = new EventSource("/api/monitor/stream");
-      esRef.current = es;
-      es.onopen = () => setConnected(true);
-      es.onerror = () => {
-        setConnected(false);
-        es.close();
-        retryTimer = setTimeout(connect, 3000);
-      };
-      es.onmessage = (e) => {
-        try {
-          const entry = JSON.parse(e.data);
-          if (entry.type === "ping") return;
-          push(entry as LogEntry);
-        } catch {}
-      };
-    };
-    connect();
-    return () => {
-      clearTimeout(retryTimer);
-      esRef.current?.close();
-    };
-  }, [push]);
-
-  // Service health.
   const checkHealth = useCallback(async () => {
     const t0 = Date.now();
     try {
@@ -199,68 +278,60 @@ export default function MonitorPage() {
     return () => clearInterval(t);
   }, [checkHealth]);
 
-  useEffect(() => {
-    const el = listRef.current;
-    if (autoScroll && el) el.scrollTop = el.scrollHeight;
-  }, [logs, autoScroll]);
+  // Same-tab saves don't trigger the broadcast listener, so update local state too.
+  const record = (run: RunTrace) => {
+    saveRun(run);
+    setRuns(loadRuns());
+  };
 
-  // Quick test: run one question and log every pipeline step it reports.
   const runTest = async () => {
     const q = testInput.trim();
     if (testing || !q) return;
     setTesting(true);
-    const id = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    push({ id: id(), ts: Date.now(), level: "info", service: "Monitor", message: `Quick test: “${q}”` });
+    const run: RunTrace = { id: newRunId(), question: q, source: "monitor", startedAt: Date.now(), status: "running", steps: [] };
+    setOpenId(run.id);
+    record(run);
     try {
       const r = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: q }),
       });
-      if (!r.ok) throw new Error(`API returned status ${r.status}`);
-      const d: { report?: Report } = await r.json();
+      if (!r.ok) throw new Error(`API returned status ${r.status}.`);
+      const d: { report?: Report; domain?: string } = await r.json();
       const report = d.report;
-      if (!report) {
-        push({ id: id(), ts: Date.now(), level: "warn", service: "Monitor", message: "Response had no report; check the backend response shape." });
-      } else {
-        for (const p of report.sources.pipeline) {
-          await sleep(Math.min(300, p.ms * 0.6));
-          push({ id: id(), ts: Date.now(), level: "step", service: p.agent.split(" · ")[0], message: `${p.step} · ${p.agent}`, duration: p.ms });
-        }
-        report.alerts.forEach((a) =>
-          push({ id: id(), ts: Date.now(), level: a.tone === "alert" ? "warn" : "info", service: "Rule Engine", message: `${a.title} · ${a.window}` }),
-        );
-        const total = report.sources.pipeline.reduce((a, b) => a + b.ms, 0);
-        push({
-          id: id(),
-          ts: Date.now(),
-          level: "success",
-          service: "Pipeline",
-          message: `${report.verdict.label}: ${report.verdict.headline}`,
-          duration: total,
-        });
+      if (!report) throw new Error("The response had no report. Check the backend response shape.");
+      run.domain = report.domain;
+      run.title = report.title;
+      for (const p of report.sources.pipeline) {
+        await sleep(Math.min(200, p.ms * 0.45));
+        run.steps = [...run.steps, { ...p, at: Date.now() }];
+        record({ ...run });
       }
-    } catch (e: any) {
-      push({
-        id: id(),
-        ts: Date.now(),
-        level: "error",
-        service: "Monitor",
-        message: `Test failed: ${e.message}. Check that the app server is running, then run the test again.`,
+      record({
+        ...run,
+        status: "done",
+        totalMs: report.sources.pipeline.reduce((a, b) => a + b.ms, 0),
+        verdict: { label: report.verdict.label, headline: report.verdict.headline, tone: report.verdict.tone },
+        alerts: report.alerts.map((a) => ({ title: a.title, window: a.window, tone: a.tone })),
       });
+    } catch (e: any) {
+      record({ ...run, status: "error", error: `${e.message} Check that the app server is running, then run the test again.` });
     }
     setTesting(false);
   };
 
-  const filtered =
-    filter === "all" ? logs : logs.filter((l) => l.level === filter || l.service.toLowerCase().includes(filter));
-  const timed = logs.filter((l) => l.duration !== undefined).slice(-12);
-  const maxMs = Math.max(...timed.map((l) => l.duration ?? 0), 1);
+  const ordered = useMemo(() => [...runs].reverse(), [runs]);
+  const filtered = ordered.filter((r) => (filter === "all" ? true : filter === "error" ? r.status === "error" : r.domain === filter));
+  const selected = runs.find((r) => r.id === openId) ?? ordered[0];
+  const maxStep = Math.max(...(selected?.steps.map((s) => s.ms) ?? [1]), 1);
+  const done = runs.filter((r) => r.status === "done");
+  const avg = done.length ? Math.round(done.reduce((a, r) => a + (r.totalMs ?? 0), 0) / done.length) : 0;
   const stats = [
-    { label: "Events", value: logs.length, tone: "neutral" as Tone },
-    { label: "Warnings", value: logs.filter((l) => l.level === "warn").length, tone: "caution" as Tone },
-    { label: "Errors", value: logs.filter((l) => l.level === "error").length, tone: "alert" as Tone },
-    { label: "Answers", value: logs.filter((l) => l.service === "Pipeline" && l.level === "success").length, tone: "ok" as Tone },
+    { label: "Runs", value: String(runs.length), tone: "neutral" as Tone },
+    { label: "Avg Run", value: done.length ? ms(avg) : "—", tone: "neutral" as Tone },
+    { label: "Alerts Raised", value: String(runs.reduce((a, r) => a + (r.alerts?.length ?? 0), 0)), tone: "caution" as Tone },
+    { label: "Errors", value: String(runs.filter((r) => r.status === "error").length), tone: "alert" as Tone },
   ];
 
   return (
@@ -268,40 +339,34 @@ export default function MonitorPage() {
       <header className="sticky top-0 z-50 flex h-14 items-center justify-between gap-3 border-b border-[color:var(--r-hair)] bg-[color:var(--r-bg)] px-4 md:px-5">
         <div className="flex min-w-0 items-center gap-3">
           <a href="/" className="r-focus flex items-center gap-2 rounded-md" aria-label="Weatherise home">
-            <img src="/Weatherise_Logo.png" alt="" width={28} height={28} className="h-7 w-7 rounded-md object-cover" />
+            <img src="/favicon.svg" alt="" width={28} height={28} className="h-7 w-7 rounded-md" />
             <span className="hidden text-[15px] font-semibold tracking-[-0.03em] sm:inline">Weatherise</span>
           </a>
-          <span aria-hidden="true" className="text-[color:var(--r-hair)]">/</span>
+          <span aria-hidden="true" className="text-[color:var(--r-hair)]">
+            /
+          </span>
           <h1 className="truncate text-[15px] font-semibold tracking-[-0.03em]">Pipeline Monitor</h1>
           <span
-            data-tone={connected ? "ok" : "caution"}
-            role="status"
-            aria-live="polite"
+            data-tone="ok"
             className="hidden items-center gap-1.5 rounded-full bg-[color:var(--tone-soft)] px-2.5 py-0.5 text-xs font-medium text-[color:var(--tone)] md:inline-flex"
           >
             <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[color:var(--tone)]" />
-            {connected ? "Stream Connected" : "Reconnecting…"}
+            Synced with App
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          <label className="r-btn hidden cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-[color:var(--r-fg2)] hover:bg-[color:var(--r-subtle)] sm:flex">
-            <input
-              type="checkbox"
-              checked={autoScroll}
-              onChange={(e) => setAutoScroll(e.target.checked)}
-              className="h-3.5 w-3.5 accent-[color:var(--r-accent)]"
-            />
-            Auto-Scroll
-          </label>
           <button
             type="button"
-            onClick={() => setLogs([])}
+            onClick={() => {
+              clearRuns();
+              setRuns([]);
+            }}
             className="r-btn r-focus inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[13px] text-[color:var(--r-fg2)] hover:bg-[color:var(--r-subtle)] hover:text-[color:var(--r-fg)]"
           >
             <Trash2 size={14} aria-hidden="true" /> Clear Log
           </button>
           <a
-            href="/"
+            href="/app"
             className="r-btn r-focus inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[13px] text-[color:var(--r-fg2)] hover:bg-[color:var(--r-subtle)] hover:text-[color:var(--r-fg)]"
           >
             <ArrowLeft size={14} aria-hidden="true" /> Back to App
@@ -326,12 +391,7 @@ export default function MonitorPage() {
                 <li key={s.key} className="flex items-center justify-between gap-2 px-4 py-2.5">
                   <span className="text-[13px] font-medium">{s.name}</span>
                   <span className="flex items-center gap-2">
-                    {s.latency !== undefined && (
-                      <span className="font-mono text-xs text-[color:var(--r-muted)] tnum">
-                        {s.latency}
-                        {" "}ms
-                      </span>
-                    )}
+                    {s.latency !== undefined && <span className="font-mono text-xs text-[color:var(--r-muted)] tnum">{ms(s.latency)}</span>}
                     <StatusPill status={s.status} />
                   </span>
                 </li>
@@ -383,22 +443,21 @@ export default function MonitorPage() {
                 {testing && <Loader2 size={14} className="animate-spin motion-reduce:animate-none" aria-hidden="true" />}
                 Run Test
               </button>
-              <p className="text-xs text-[color:var(--r-muted)]">Each pipeline step appears in the log as it runs.</p>
             </form>
           </Card>
         </div>
 
-        {/* Center: log stream */}
+        {/* Center: one entry per question */}
         <Card
-          title="Event Log"
+          title="Runs"
           className="min-h-[420px]"
           aside={
             <span className="text-xs text-[color:var(--r-muted)] tnum">
-              {filtered.length} {filtered.length === 1 ? "entry" : "entries"}
+              {filtered.length} {filtered.length === 1 ? "run" : "runs"} · kept after refresh
             </span>
           }
         >
-          <div className="flex flex-wrap gap-1 border-b border-[color:var(--r-hair)] px-3 py-2" role="group" aria-label="Filter log">
+          <div className="flex flex-wrap gap-1 border-b border-[color:var(--r-hair)] px-3 py-2" role="group" aria-label="Filter runs">
             {FILTERS.map((f) => (
               <button
                 key={f.key}
@@ -416,82 +475,48 @@ export default function MonitorPage() {
             ))}
           </div>
 
-          <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto [overscroll-behavior:contain]" aria-live="polite" aria-relevant="additions">
+          <div className="min-h-0 flex-1 overflow-y-auto [overscroll-behavior:contain]" aria-live="polite">
             {filtered.length === 0 ? (
               <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-2 px-6 text-center">
                 <Radio size={20} className="text-[color:var(--r-muted)]" aria-hidden="true" />
-                <p className="text-[13px] font-medium">{connected ? "Waiting for Pipeline Events…" : "Connecting to the Event Stream…"}</p>
-                <p className="text-xs text-[color:var(--r-muted)]">Run a Quick Test or ask a question in the app.</p>
+                <p className="text-[13px] font-medium">No Runs Yet</p>
+                <p className="text-xs text-[color:var(--r-muted)]">
+                  Ask a question in the{" "}
+                  <a href="/app" className="r-focus rounded-sm text-[color:var(--r-accent)] underline-offset-2 hover:underline">
+                    app
+                  </a>{" "}
+                  or run a Quick Test. Each step appears here as it runs.
+                </p>
               </div>
             ) : (
-              <ol className="font-mono text-xs">
-                {filtered.map((log) => (
-                  <li
-                    key={log.id}
-                    className="grid grid-cols-[64px_minmax(0,1fr)] gap-x-3 gap-y-1 border-b border-[color:var(--r-hair)] px-4 py-2 last:border-0 hover:bg-[color:var(--r-subtle)] md:grid-cols-[64px_128px_52px_minmax(0,1fr)_72px] md:items-start"
-                  >
-                    <time className="pt-px text-[color:var(--r-muted)] tnum" dateTime={new Date(log.ts).toISOString()}>
-                      {timeFmt.format(log.ts)}
-                    </time>
-                    <span className="truncate pt-px font-medium text-[color:var(--r-fg2)]" translate="no">
-                      {log.service}
-                    </span>
-                    <span className="hidden md:block">
-                      <LevelBadge level={log.level} />
-                    </span>
-                    <span
-                      data-tone={log.level === "error" ? "alert" : undefined}
-                      className={`r-sans col-span-2 break-words text-[13px] leading-relaxed md:col-span-1 ${
-                        log.level === "error" ? "text-[color:var(--tone)]" : log.level === "success" ? "text-[color:var(--r-fg)]" : "text-[color:var(--r-fg2)]"
-                      }`}
-                    >
-                      <span className="mr-2 md:hidden">
-                        <LevelBadge level={log.level} />
-                      </span>
-                      {log.message}
-                    </span>
-                    <span
-                      data-tone={log.duration !== undefined ? durationTone(log.duration, log.service) : undefined}
-                      className={`hidden text-right tnum md:block ${
-                        log.duration !== undefined && durationTone(log.duration, log.service) !== "neutral" ? "text-[color:var(--tone)]" : "text-[color:var(--r-muted)]"
-                      }`}
-                    >
-                      {log.duration !== undefined ? `${log.duration.toLocaleString("en-US")} ms` : ""}
-                    </span>
-                  </li>
+              <ul>
+                {filtered.map((run) => (
+                  <RunCard key={run.id} run={run} open={run.id === selected?.id} onToggle={() => setOpenId(run.id === openId ? null : run.id)} />
                 ))}
-              </ol>
+              </ul>
             )}
           </div>
         </Card>
 
-        {/* Right: latency + stats */}
+        {/* Right: selected run latency + stats */}
         <div className="flex min-h-0 flex-col gap-4">
-          <Card title="Step Latency" className="flex-1" aside={<span className="text-xs text-[color:var(--r-muted)]">Last 12</span>}>
+          <Card title="Step Latency" className="flex-1" aside={<span className="text-xs text-[color:var(--r-muted)]">Selected Run</span>}>
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-              {timed.length === 0 ? (
+              {!selected || selected.steps.length === 0 ? (
                 <p className="pt-4 text-center text-xs text-[color:var(--r-muted)]">No timed steps yet.</p>
               ) : (
-                timed.map((l) => {
-                  const tone = durationTone(l.duration ?? 0, l.service);
+                selected.steps.map((s, i) => {
+                  const tone = durationTone(s.ms);
                   return (
-                    <div key={l.id} data-tone={tone}>
+                    <div key={`${s.step}-${i}`} data-tone={tone}>
                       <div className="mb-1 flex items-baseline justify-between gap-2 text-xs">
-                        <span className="truncate text-[color:var(--r-fg2)]" translate="no">
-                          {l.service}
-                        </span>
-                        <span className={`font-mono tnum ${tone === "neutral" ? "text-[color:var(--r-fg)]" : "text-[color:var(--tone)]"}`}>
-                          {(l.duration ?? 0).toLocaleString("en-US")}
-                          {" "}ms
-                        </span>
+                        <span className="truncate text-[color:var(--r-fg2)]">{s.step}</span>
+                        <span className={`font-mono tnum ${tone === "neutral" ? "text-[color:var(--r-fg)]" : "text-[color:var(--tone)]"}`}>{ms(s.ms)}</span>
                       </div>
                       <div className="h-1.5 rounded-full bg-[color:var(--r-subtle)]">
                         <div
                           className="h-full rounded-full"
-                          style={{
-                            width: `${Math.max(4, ((l.duration ?? 0) / maxMs) * 100)}%`,
-                            background: tone === "neutral" ? "var(--r-series)" : "var(--tone)",
-                          }}
+                          style={{ width: `${Math.max(4, (s.ms / maxStep) * 100)}%`, background: tone === "neutral" ? "var(--r-series)" : "var(--tone)" }}
                         />
                       </div>
                     </div>
@@ -507,8 +532,8 @@ export default function MonitorPage() {
                 <div key={s.label} data-tone={s.tone} className="bg-[color:var(--r-bg)] px-4 py-3">
                   <dt className="text-xs text-[color:var(--r-muted)]">{s.label}</dt>
                   <dd
-                    className={`text-[22px] font-semibold tracking-[-0.04em] ${
-                      s.value > 0 && (s.tone === "alert" || s.tone === "caution") ? "text-[color:var(--tone)]" : ""
+                    className={`text-[20px] font-semibold tracking-[-0.04em] tnum ${
+                      s.value !== "0" && (s.tone === "alert" || s.tone === "caution") ? "text-[color:var(--tone)]" : ""
                     }`}
                   >
                     {s.value}
