@@ -191,6 +191,28 @@ export default function HomePage() {
     }
   }, []);
 
+  // Grow the home search box with its content (up to ~6 lines, then scroll).
+  useEffect(() => {
+    const fit = () => {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.style.height = "auto";
+      el.style.height = `${Math.min(el.scrollHeight, 168)}px`;
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [input]);
+
+  // Tab title follows the current answer.
+  useEffect(() => {
+    document.title = latestResult?.report
+      ? `${latestResult.report.title} · Weatherise`
+      : loading
+        ? "Working on It… · Weatherise"
+        : "Weatherise · Weather Decisions for Da Nang";
+  }, [latestResult, loading]);
+
   const toggleTheme = () => {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
@@ -334,22 +356,29 @@ export default function HomePage() {
                   </p>
                   
                   {/* Search Composer Container */}
-                  <div className="w-full max-w-xl mt-6 rounded-full border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-slate-950/80 shadow-lg px-5 py-3 flex items-center gap-3">
-                    <Search size={18} className="text-slate-400 dark:text-slate-400 shrink-0" />
+                  <div
+                    className={`w-full max-w-xl mt-6 border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-slate-950/80 shadow-lg pl-5 pr-3 py-2.5 flex items-end gap-3 transition-[border-radius] focus-within:ring-2 focus-within:ring-blue-500/40 ${
+                      input.length > 60 || input.includes("\n") ? "rounded-[26px]" : "rounded-full"
+                    }`}
+                  >
+                    <Search size={18} aria-hidden="true" className="self-start mt-[7px] text-slate-400 dark:text-slate-400 shrink-0" />
+                    <label htmlFor="home-question" className="sr-only">Ask Weatherise</label>
                     <textarea
+                      id="home-question"
                       ref={textareaRef}
                       rows={1}
                       value={input}
                       onChange={e => setInput(e.target.value)}
                       onKeyDown={handleKey}
-                      placeholder="Ask anything about weather risk for your plans..."
+                      placeholder="Ask about weather risk for your plans…"
                       disabled={loading}
-                      className="flex-1 bg-transparent text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-400 resize-none outline-none leading-relaxed py-1"
+                      className="flex-1 min-w-0 max-h-[168px] overflow-y-auto bg-transparent text-base text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-400 resize-none outline-none leading-relaxed py-1"
                     />
                     <button 
                       onClick={() => sendMessage(input)} 
                       disabled={!input.trim() || loading}
-                      className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all bg-blue-600 dark:bg-cyan-400 hover:scale-[1.05] active:scale-[0.95] disabled:opacity-30 disabled:hover:scale-100 shadow-md outline-none"
+                      aria-label="Send Question"
+                      className="mb-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all bg-blue-600 dark:bg-cyan-400 hover:scale-[1.05] active:scale-[0.95] disabled:opacity-30 disabled:hover:scale-100 shadow-md outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                     >
                       <ArrowRight size={14} className="text-white dark:text-slate-950 font-bold stroke-[3]" />
                     </button>

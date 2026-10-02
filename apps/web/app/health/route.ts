@@ -17,7 +17,7 @@ export async function GET() {
     system: {
       platform: "Weatherise Multi-Agent System (Vercel Serverless Demo)",
       models: {
-        reasoning: "DeepSeek-R1-Distill-Llama-70B (NVIDIA NIM)",
+        reasoning: "Nemotron-3 Super 120B (NVIDIA NIM)",
         domain_general: "Llama-3.1-70B-Instruct",
         meteorological_agent: "Qwen-2.5-72B-Instruct",
         guardrails: "NeMo Guardrails v0.9.0"

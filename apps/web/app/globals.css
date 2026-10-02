@@ -391,6 +391,7 @@ html.dark .report {
 }
 
 .report .font-mono { font-family: 'Geist Mono', ui-monospace, SFMono-Regular, monospace; }
+.report .r-sans { font-family: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif; }
 .report .tnum { font-variant-numeric: tabular-nums; }
 .report .balance { text-wrap: balance; }
 
