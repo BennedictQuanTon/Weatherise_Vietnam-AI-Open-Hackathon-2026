@@ -380,13 +380,11 @@ Four builders from **HCMUT – UTS**, guided by three NVIDIA mentors.
 
 **Mentors**
 
-<table>
-  <tr>
-    <td align="center" width="33%"><img src="apps/web/public/landing/team/yash-gupta.jpg" width="110" alt="Yash Gupta" /><br/><b>Mr. Yash Gupta</b><br/><sub>Senior Solution Architect · NVIDIA India</sub></td>
-    <td align="center" width="33%"><img src="apps/web/public/landing/team/van-le.jpg" width="110" alt="Van Le" /><br/><b>Mr. Van Le</b><br/><sub>Head of AI/ML · NVIDIA USA</sub></td>
-    <td align="center" width="33%"><img src="apps/web/public/landing/team/tran-minh-quan.jpg" width="110" alt="Tran Minh Quan" /><br/><b>Mr. Tran Minh Quan</b><br/><sub>Senior Developer Technology Engineer · NVIDIA Vietnam</sub></td>
-  </tr>
-</table>
+| Mentor | Role |
+|---|---|
+| **Mr. Yash Gupta** | Senior Solution Architect · NVIDIA India |
+| **Mr. Van Le** | Head of AI/ML · NVIDIA USA |
+| **Mr. Tran Minh Quan** | Senior Developer Technology Engineer · NVIDIA Vietnam |
 
 Built at the **Vietnam AI Open Hackathon 2026** (Jun 9–12, Da Nang), organized by DSAC with NVIDIA, Viettel, Sovico Group, OpenACC, and Open Hackathons [10][11].
 
