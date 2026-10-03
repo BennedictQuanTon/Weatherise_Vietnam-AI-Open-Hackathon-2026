@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Github } from "lucide-react";
+import { GITHUB_URL } from "./content";
 import { IPadPro, IPhonePro, MacBookPro, Screen } from "./Devices";
 import { MaskHeading, Reveal, useScrollProgress } from "./motion";
 
@@ -49,26 +50,33 @@ export default function Hero() {
             <a href="/app" className="l-btn l-btn-lg l-btn-primary">
               Try It Out <ArrowRight size={18} aria-hidden="true" />
             </a>
+            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="l-btn l-btn-outline">
+              <Github size={19} aria-hidden="true" /> View on GitHub
+            </a>
           </div>
         </Reveal>
       </div>
 
-      {/* Device trio: iPad left, MacBook center, iPhone right (all real app screens) */}
+      {/*
+        Device trio composed like a product shot: all three stand on one baseline.
+        iPad sits behind the MacBook's left edge, iPhone in front of its right edge, slightly forward.
+        Positions are % of a 1185 × 645 stage (measured from Apple-style marketing compositions).
+      */}
       <div ref={ref} className="l-container mt-14 md:mt-16">
-        <div className="relative mx-auto aspect-[1200/600] max-w-[1200px]">
-          <Float className="left-0 top-[33%] z-0 w-[23%]" delay={260} from="translate3d(-40px,30px,0)" spread={-30} progress={p}>
+        <div className="relative mx-auto aspect-[1185/650] max-w-[1185px]">
+          <Float className="bottom-[5.4%] left-0 z-0 w-[26%]" delay={260} from="translate3d(-40px,30px,0)" spread={-26} progress={p}>
             <IPadPro>
               <Screen src="/landing/devices/ipad-agri.jpg" alt="Weatherise on iPad: the Hoa Vang rice co-op plan with a skip-irrigation verdict." width={1668} height={2388} />
             </IPadPro>
           </Float>
-          <Float className="left-[13%] top-0 z-10 w-[74%]" delay={0} from="translate3d(0,40px,0)" spread={0} progress={p}>
+          <Float className="bottom-[2.6%] left-[9.6%] z-10 w-[86%]" delay={0} from="translate3d(0,40px,0)" spread={0} progress={p}>
             <MacBookPro>
               <Screen src="/landing/devices/mac-home.jpg" alt="Weatherise on a MacBook: the home dashboard over Da Nang's Dragon Bridge, with live weather and domain shortcuts." width={3024} height={1964} />
             </MacBookPro>
           </Float>
-          <Float className="right-[1%] top-[30%] z-20 w-[16%]" delay={420} from="translate3d(40px,30px,0)" spread={30} progress={p}>
+          <Float className="bottom-0 right-0 z-20 w-[19.2%]" delay={420} from="translate3d(40px,30px,0)" spread={26} progress={p}>
             <IPhonePro>
-              <Screen src="/landing/devices/iphone-home.jpg" alt="Weatherise on iPhone: the home screen asking about weather risk for your plans." width={1179} height={2556} top={5.6} />
+              <Screen src="/landing/devices/iphone-tourism.jpg" alt="Weatherise on iPhone: the 3-day Da Nang trip is Good to Go, with Friday's storm block moved indoors." width={1179} height={2556} top={5.6} />
             </IPhonePro>
           </Float>
         </div>

@@ -2,6 +2,8 @@
 
 export const ACCESSED = "Accessed Oct 3, 2026";
 
+export const GITHUB_URL = "https://github.com/BennedictQuanTon/WeatherRise-2026";
+
 export interface Reference {
   id: number;
   source: string;
@@ -46,10 +48,10 @@ export const ORGANIZERS = [
 ];
 
 export const COMPETITION_FACTS = [
-  { value: "9–12", label: "June 2026 · Da Nang, Vietnam", ref: 11 },
-  { value: "8×", label: "NVIDIA H200 GPUs per team, provided by Viettel", ref: 10 },
-  { value: "3", label: "Tracks: Generative, Agentic & Physical AI", ref: 11 },
-  { value: "₫200M", label: "Prize pool for the top 3 teams", ref: 10 },
+  { top: "June", value: "9–12", label: "2026, in Da Nang, Vietnam", ref: 11 },
+  { top: "NVIDIA H200", value: "8×", label: "GPUs per team, provided by Viettel", ref: 10 },
+  { top: "Tracks", value: "3", label: "Generative, Agentic & Physical AI", ref: 11 },
+  { top: "Prize Pool", value: "₫200M", label: "For the top three teams", ref: 10 },
 ];
 
 export type ProblemArt = "tourism" | "grid" | "rules" | "spof";
@@ -175,14 +177,15 @@ export const FEATURES = [
   },
 ];
 
+// Each step has its own system color (Apple-style icon tiles) so the flow reads at a glance.
 export const PIPELINE = [
-  { name: "Parse", detail: "Qwen 3.5 27B on vLLM turns the question into structured intent.", payload: '{ domain: "construction", site: "Hoa Lien Overpass", when: "Fri, Jun 12", asks: 3 }' },
-  { name: "Orchestrate", detail: "LangGraph routes it to the tourism, construction, or agriculture agent.", payload: "route → ConstructionContextAgent" },
-  { name: "Gather Context", detail: "MCP tools fetch places, sites, and fields; RAG fills the gaps.", payload: "site 16.001, 108.152 · tower crane · deck slab pour" },
-  { name: "Fetch Weather", detail: "Seven providers queried in parallel and normalized.", payload: "7 providers · hourly, Thu 06:00 → Fri 20:00" },
-  { name: "Reach Consensus", detail: "Path B scores, fuses, and arbitrates with Nemotron.", payload: "rain 75% · gust 62 km/h · agreement 92%" },
-  { name: "Apply Rules", detail: "A deterministic engine checks every safety threshold.", payload: "Friday: 5 of 6 rules fail · Thursday: 6 of 6 pass" },
-  { name: "Answer", detail: "Nemotron-3 Super on NVIDIA NIM writes the plan.", payload: "Reschedule → pour Thu 06:30–10:30 · crane halt Fri 12:00–17:00" },
+  { name: "Parse", agent: "Qwen 3.5 27B · vLLM", color: "#0088ff", detail: "Turns the question into structured intent: domain, place, dates, and every sub-question.", payload: '{ domain: "construction", site: "Hoa Lien Overpass", when: "Fri, Jun 12", asks: 3 }' },
+  { name: "Orchestrate", agent: "LangGraph", color: "#5856d6", detail: "Routes the request to the tourism, construction, or agriculture agent.", payload: "route → ConstructionContextAgent" },
+  { name: "Gather Context", agent: "MCP · Qdrant RAG", color: "#30b0c7", detail: "Fetches places, sites, and fields through MCP tools; RAG fills what's missing.", payload: "site 16.001, 108.152 · tower crane · deck slab pour" },
+  { name: "Fetch Weather", agent: "MCP · 7 providers", color: "#32ade6", detail: "Queries seven weather providers in parallel and normalizes every reading.", payload: "7 providers · hourly, Thu 06:00 → Fri 20:00" },
+  { name: "Reach Consensus", agent: "Path B · Nemotron arbiter", color: "#34c759", detail: "Scores each source, drops outliers, and fuses one forecast you can trust.", payload: "rain 75% · gust 62 km/h · agreement 92%" },
+  { name: "Apply Rules", agent: "Deterministic rule engine", color: "#ff9500", detail: "Checks every safety threshold for the domain and records pass or fail.", payload: "Friday: 5 of 6 rules fail · Thursday: 6 of 6 pass" },
+  { name: "Answer", agent: "Nemotron-3 Super · NVIDIA NIM", color: "#cb30e0", detail: "Writes the plan: a verdict, the safe windows, and the reasons behind them.", payload: "Reschedule → pour Thu 06:30–10:30 · crane halt Fri 12:00–17:00" },
 ];
 
 

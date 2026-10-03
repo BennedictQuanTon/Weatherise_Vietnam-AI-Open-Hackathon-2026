@@ -4,22 +4,27 @@ import { useId } from "react";
 import { Check, Minus, X } from "lucide-react";
 import { COMPARISON, RESULTS, type Support } from "./content";
 import { Cite } from "./Competition";
-import { MaskHeading, Odometer, Reveal, prefersReducedMotion, useInView, useStickyProgress } from "./motion";
+import { MaskHeading, Odometer, Reveal, useInView } from "./motion";
 
-function MobileResult({ res }: { res: (typeof RESULTS)[number] }) {
-  const [ref, inView] = useInView<HTMLDivElement>({ threshold: 0.4 });
+/** Apple-style tile: label, huge figure, one line, the chart, then the method in small print. */
+function ResultCard({ res, index }: { res: (typeof RESULTS)[number]; index: number }) {
+  const [ref, inView] = useInView<HTMLDivElement>({ threshold: 0.35 });
   return (
-    <div ref={ref} className="l-card rounded-[28px] p-7">
-      <div className="text-[56px] font-bold leading-none tracking-[-0.04em]">
-        <Odometer value={res.display} active={inView} />
+    <div ref={ref} className="flex h-full flex-col rounded-[32px] bg-white p-8 md:p-10">
+      <p className="text-[17px] font-semibold" style={{ color: res.accent }}>
+        {res.title}
+      </p>
+      <div className="mt-2 text-[clamp(56px,6.4vw,84px)] font-bold leading-none tracking-[-0.04em] text-[color:var(--l-ink)]">
+        <Odometer value={res.display} active={inView} stagger={70 + index * 10} />
       </div>
-      <h3 className="l-heading-sm mt-3">{res.title}</h3>
-      <p className="l-body mt-1">{res.sub}</p>
-      <div className="mt-6">
+      <p className="l-slide-sub mt-3 max-w-[420px]">{res.sub}</p>
+      <div className="mt-8 flex flex-1 items-center">
         <ResultVisual kind={res.visual} active={inView} />
       </div>
-      <p className="mt-6 text-[14px] font-semibold tnum">{res.n}</p>
-      <p className="l-caption mt-1">{res.method}</p>
+      <div className="mt-8 border-t border-[color:var(--l-mist)] pt-5">
+        <p className="text-[14px] font-semibold text-[color:var(--l-ink)] tnum">{res.n}</p>
+        <p className="l-caption mt-1">{res.method}</p>
+      </div>
     </div>
   );
 }
@@ -192,105 +197,24 @@ function ResultVisual({ kind, active }: { kind: (typeof RESULTS)[number]["visual
 }
 
 export default function Impact() {
-  const [ref, progress] = useStickyProgress<HTMLDivElement>();
-  const n = RESULTS.length;
-  const t = Math.min(1, Math.max(0, (progress - 0.05) / 0.85));
-  const idx = Math.min(n - 1, Math.round(t * (n - 1)));
-  const r = RESULTS[idx];
-
-  const jumpTo = (i: number) => {
-    const el = ref.current;
-    if (!el) return;
-    const travel = el.offsetHeight - window.innerHeight;
-    const target = el.getBoundingClientRect().top + window.scrollY + travel * (0.05 + (0.85 * i) / (n - 1));
-    window.scrollTo({ top: target, behavior: prefersReducedMotion() ? "auto" : "smooth" });
-  };
-
   return (
     <section id="impact" className="l-snow">
-      {/* Desktop: pinned, scroll walks through the four results */}
-      <div ref={ref} className="relative hidden lg:block" style={{ height: "360vh" }}>
-        <div className="sticky top-0 flex h-screen flex-col justify-center">
-          <div className="l-container">
-            <div className="text-center">
-              <p className="l-eyebrow">Impact</p>
-              <MaskHeading className="l-heading-lg mt-3" lines={["Validated on real", <span key="b" className="l-gradient-text">Da Nang data.</span>]} />
-              <p className="l-caption mt-3">Measured by the team during the Vietnam AI Open Hackathon, June 2026.</p>
-            </div>
-
-            <div className="mt-12 grid items-center gap-12 lg:grid-cols-[1fr_1fr]">
-              <div>
-                <span className="text-[14px] font-semibold text-[color:var(--l-pewter)] tnum">
-                  0{idx + 1} / 0{n}
-                </span>
-                <div className="mt-3 text-[clamp(72px,8vw,112px)] font-bold leading-none tracking-[-0.04em] text-[color:var(--l-ink)]">
-                  <Odometer key={r.display} value={r.display} active />
-                </div>
-                <div key={`t-${idx}`} className="r-fade-in">
-                  <h3 className="l-heading mt-5">{r.title}</h3>
-                  <p className="l-sub mt-2 max-w-[440px]">{r.sub}</p>
-                  <p className="mt-6 text-[15px] font-semibold text-[color:var(--l-ink)] tnum">{r.n}</p>
-                  <p className="l-caption mt-1 max-w-[440px]">{r.method}</p>
-                </div>
-              </div>
-              <div className="l-card relative flex min-h-[340px] items-center rounded-[32px] p-10">
-                {RESULTS.map((res, i) => (
-                  <div
-                    key={res.title}
-                    className="absolute inset-10 flex items-center"
-                    style={{
-                      opacity: i === idx ? 1 : 0,
-                      transform: i === idx ? "none" : `translateY(${i < idx ? -20 : 20}px)`,
-                      transition: `opacity 500ms ${EASE}, transform 700ms ${EASE}`,
-                    }}
-                    aria-hidden={i !== idx}
-                  >
-                    <ResultVisual kind={res.visual} active={i === idx} />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Connector rail linking the four results: track runs between the column centers */}
-            <div className="relative mx-auto mt-14 max-w-[960px]">
-              <div className="absolute left-[12.5%] right-[12.5%] top-[7px] h-[2px] rounded-full bg-[rgba(208,208,211,0.5)]" aria-hidden="true">
-                <div className="h-full rounded-full" style={{ width: `${t * 100}%`, background: "var(--l-brand)" }} />
-                <span
-                  className="absolute top-[-7px] h-4 w-4 -translate-x-1/2 rounded-full bg-white shadow-[0_0_0_3px_#0088ff,0_0_18px_4px_rgba(0,136,255,0.35)]"
-                  style={{ left: `${t * 100}%` }}
-                />
-              </div>
-              <ol className="relative grid grid-cols-4">
-                {RESULTS.map((res, i) => (
-                  <li key={res.title} className="flex justify-center">
-                    <button type="button" onClick={() => jumpTo(i)} className="l-link flex flex-col items-center" aria-current={i === idx ? "step" : undefined}>
-                      <span className="h-4 w-4 rounded-full border-2 bg-white transition-colors duration-300" style={{ borderColor: i <= idx ? "#0088ff" : "#d0d0d3" }} />
-                      <span className={`mt-3 whitespace-nowrap text-[14px] ${i === idx ? "font-semibold text-[color:var(--l-ink)]" : "text-[color:var(--l-smoke)]"}`}>{res.title}</span>
-                    </button>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </div>
+      <div className="l-container l-section">
+        <div className="mx-auto max-w-[780px] text-center">
+          <p className="l-eyebrow">Impact</p>
+          <MaskHeading className="l-heading-lg mt-3" lines={["Validated on real", <span key="b" className="l-gradient-text">Da Nang data.</span>]} />
+          <Reveal delay={150}>
+            <p className="l-hero-sub mt-4">Measured by the team during the Vietnam AI Open Hackathon, June 2026.</p>
+          </Reveal>
         </div>
-      </div>
 
-      <div className="l-container l-section !pt-0 lg:!pt-0">
-        {/* Mobile / tablet: stacked results */}
-        <div className="pt-[clamp(80px,11vw,120px)] lg:hidden">
-          <div className="text-center">
-            <p className="l-eyebrow">Impact</p>
-            <MaskHeading className="l-heading-lg mt-3" lines={["Validated on real", <span key="b" className="l-gradient-text">Da Nang data.</span>]} />
-            <p className="l-caption mt-3">Measured by the team during the Vietnam AI Open Hackathon, June 2026.</p>
-          </div>
-          <ul className="mt-10 space-y-5">
-            {RESULTS.map((res) => (
-              <Reveal as="li" key={res.title}>
-                <MobileResult res={res} />
-              </Reveal>
-            ))}
-          </ul>
-        </div>
+        <ul className="mt-14 grid gap-5 md:mt-16 md:grid-cols-2">
+          {RESULTS.map((res, i) => (
+            <Reveal as="li" key={res.title} delay={(i % 2) * 120} className="h-full">
+              <ResultCard res={res} index={i} />
+            </Reveal>
+          ))}
+        </ul>
 
         <Reveal className="mt-24 text-center">
           <h3 className="l-heading">How Weatherise Compares</h3>

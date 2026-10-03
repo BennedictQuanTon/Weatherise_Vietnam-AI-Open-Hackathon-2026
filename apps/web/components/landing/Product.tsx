@@ -196,7 +196,17 @@ export function HowItWorks() {
   const t = Math.min(1, Math.max(0, (progress - 0.06) / 0.84));
   const idx = Math.min(n - 1, Math.round(t * (n - 1)));
   const step = PIPELINE[idx];
+  const StepIcon = STEP_ICONS[idx];
   const half = Math.ceil(STACK_ICONS.length / 2);
+  const stops = PIPELINE.map((p, i) => `${p.color} ${(i / (n - 1)) * 100}%`).join(", ");
+
+  const jumpTo = (i: number) => {
+    const el = ref.current;
+    if (!el) return;
+    const travel = el.offsetHeight - window.innerHeight;
+    const target = el.getBoundingClientRect().top + window.scrollY + travel * (0.06 + (0.84 * i) / (n - 1)) + 2;
+    window.scrollTo({ top: target, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  };
 
   return (
     <section className="bg-white" aria-labelledby="how-heading">
@@ -209,17 +219,16 @@ export function HowItWorks() {
               <MaskHeading id="how-heading" className="l-heading-lg mt-3" lines={["From question to decision,", "in one pipeline."]} />
             </div>
 
-            <div className="relative mt-16 h-[120px]">
-              <div aria-hidden="true" className="absolute left-7 right-7 top-[27px] h-[2px] rounded-full bg-[color:var(--l-mist)]" />
+            {/* Flow */}
+            <div className="relative mt-14 h-[112px]">
+              <div aria-hidden="true" className="absolute left-7 right-7 top-[27px] h-[3px] rounded-full bg-[color:var(--l-mist)]" />
               <div
                 aria-hidden="true"
-                className="absolute left-7 right-7 top-[27px] h-[2px] origin-left rounded-full"
-                style={{ background: "var(--l-brand)", transform: `scaleX(${t})` }}
+                className="absolute left-7 right-7 top-[27px] h-[3px] origin-left rounded-full"
+                style={{ background: `linear-gradient(90deg, ${stops})`, transform: `scaleX(${t})` }}
               />
-              {/* the packet */}
               <div aria-hidden="true" className="absolute top-[28px] z-20" style={{ left: `calc(28px + (100% - 56px) * ${t})` }}>
-                <span className="absolute -left-[60px] -top-[1px] h-[2px] w-[60px] rounded-full bg-gradient-to-r from-transparent to-[#0088ff]" />
-                <span className="absolute -left-[7px] -top-[7px] h-[14px] w-[14px] rounded-full bg-white shadow-[0_0_0_3px_#0088ff,0_0_22px_6px_rgba(0,136,255,0.45)]" />
+                <span className="absolute -left-[7px] -top-[7px] h-[14px] w-[14px] rounded-full bg-white" style={{ boxShadow: `0 0 0 3px ${step.color}, 0 0 20px 6px ${step.color}55` }} />
               </div>
               <ol className="absolute inset-0">
                 {PIPELINE.map((s, i) => {
@@ -227,47 +236,60 @@ export function HowItWorks() {
                   const reached = i <= idx;
                   const current = i === idx;
                   return (
-                    <li key={s.name} className="absolute top-0 flex -translate-x-1/2 flex-col items-center" style={{ left: `calc(28px + (100% - 56px) * ${i / (n - 1)})` }}>
-                      <span className="relative flex h-14 w-14 items-center justify-center">
-                        {current && <span className="l-ping absolute inset-0 rounded-full bg-[rgba(0,136,255,0.25)]" aria-hidden="true" />}
+                    <li key={s.name} className="absolute top-0 -translate-x-1/2" style={{ left: `calc(28px + (100% - 56px) * ${i / (n - 1)})` }}>
+                      <button type="button" onClick={() => jumpTo(i)} className="l-link flex flex-col items-center" aria-current={current ? "step" : undefined}>
                         <span
-                          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-[var(--l-shadow)] transition-[transform,color,box-shadow] duration-500"
+                          className="flex h-14 w-14 items-center justify-center rounded-[18px] transition-[transform,background-color,color,box-shadow] duration-500"
                           style={{
-                            color: reached ? "#0088ff" : "#ababb0",
-                            transform: current ? "scale(1.12)" : "scale(1)",
-                            boxShadow: current ? "0 0 0 2px #0088ff, 0 10px 30px rgba(0,136,255,0.25)" : undefined,
+                            background: reached ? s.color : "#fff",
+                            color: reached ? "#fff" : "#ababb0",
+                            transform: current ? "scale(1.14)" : "scale(1)",
+                            boxShadow: current ? `0 12px 28px ${s.color}59` : reached ? "none" : "0 0 0 1px rgba(16,16,16,0.08), 0 4px 12px rgba(16,16,16,0.05)",
                           }}
                         >
-                          <Icon size={22} strokeWidth={1.75} aria-hidden="true" />
+                          <Icon size={24} strokeWidth={1.9} aria-hidden="true" />
                         </span>
-                      </span>
-                      <span className={`mt-4 whitespace-nowrap text-[15px] transition-colors duration-300 ${reached ? "font-semibold text-[color:var(--l-ink)]" : "text-[color:var(--l-pewter)]"}`}>
-                        {s.name}
-                      </span>
+                        <span className={`mt-4 whitespace-nowrap text-[15px] transition-colors duration-300 ${current ? "font-semibold text-[color:var(--l-ink)]" : reached ? "text-[color:var(--l-ink)]" : "text-[color:var(--l-pewter)]"}`}>
+                          {s.name}
+                        </span>
+                      </button>
                     </li>
                   );
                 })}
               </ol>
             </div>
 
-            <div className="mt-12 grid items-start gap-10 lg:grid-cols-[1fr_1.1fr]">
-              <div key={`d-${idx}`} className="r-fade-in">
-                <div className="text-[64px] font-bold leading-none tracking-[-0.03em] text-[color:var(--l-mist)] tnum">0{idx + 1}</div>
-                <h3 className="l-heading mt-2">{step.name}</h3>
-                <p className="l-sub mt-3 max-w-[460px]">{step.detail}</p>
-              </div>
-              <div className="rounded-[24px] bg-[#101010] p-7 text-white shadow-[var(--l-shadow)]">
-                <div className="flex items-center justify-between text-[13px] text-[#8e8e93]">
-                  <span>Output · step {idx + 1} of {n}</span>
-                  <span className="flex gap-1.5" aria-hidden="true">
-                    {PIPELINE.map((_, i) => (
-                      <span key={i} className="h-1.5 w-5 rounded-full transition-colors duration-300" style={{ background: i <= idx ? "#34c759" : "#2c2c2e" }} />
-                    ))}
+            {/* Step detail */}
+            <div className="mt-12 rounded-[32px] bg-[color:var(--l-snow)] p-3">
+              <div className="grid items-stretch gap-3 lg:grid-cols-[1fr_1.15fr]">
+                <div key={`d-${idx}`} className="r-fade-in flex items-start gap-5 p-7">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] text-white" style={{ background: step.color }}>
+                    <StepIcon size={22} strokeWidth={1.9} aria-hidden="true" />
                   </span>
+                  <div>
+                    <p className="text-[14px] font-semibold tnum" style={{ color: step.color }}>
+                      Step {idx + 1} of {n}
+                    </p>
+                    <h3 className="l-slide-title mt-1">{step.name}</h3>
+                    <p className="l-slide-sub mt-3 max-w-[440px]">{step.detail}</p>
+                  </div>
                 </div>
-                <p key={`p-${idx}`} className="r-fade-in mt-5 min-h-[56px] font-mono text-[16px] leading-relaxed text-[#e5e5ea]">
-                  {step.payload}
-                </p>
+                <div className="flex flex-col rounded-[24px] bg-white p-7 shadow-[0_0_0_1px_rgba(16,16,16,0.05)]">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[14px] font-semibold text-[color:var(--l-smoke)]">Output</span>
+                    <span key={`a-${idx}`} className="r-fade-in rounded-full px-3 py-1 text-[13px] font-medium" style={{ background: `${step.color}14`, color: step.color }}>
+                      {step.agent}
+                    </span>
+                  </div>
+                  <p key={`p-${idx}`} className="r-fade-in mt-5 flex-1 font-mono text-[16px] leading-relaxed text-[color:var(--l-ink)]">
+                    {step.payload}
+                  </p>
+                  <div className="mt-6 flex gap-1.5" aria-hidden="true">
+                    {PIPELINE.map((s, i) => (
+                      <span key={i} className="h-1.5 flex-1 rounded-full transition-colors duration-300" style={{ background: i <= idx ? s.color : "#f0f0f0" }} />
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -285,12 +307,12 @@ export function HowItWorks() {
             const Icon = STEP_ICONS[i];
             return (
               <Reveal as="li" key={s.name} delay={i * 60} className="relative">
-                <span className="absolute -left-[53px] top-0 flex h-10 w-10 items-center justify-center rounded-full bg-white text-[color:var(--l-blue)] shadow-[var(--l-shadow)]">
-                  <Icon size={18} aria-hidden="true" />
+                <span className="absolute -left-[57px] top-0 flex h-11 w-11 items-center justify-center rounded-[14px] text-white" style={{ background: s.color }}>
+                  <Icon size={19} aria-hidden="true" />
                 </span>
                 <h3 className="text-[18px] font-semibold">{s.name}</h3>
                 <p className="l-body mt-1">{s.detail}</p>
-                <p className="mt-2 rounded-xl bg-[#101010] px-4 py-3 font-mono text-[13px] text-[#e5e5ea]">{s.payload}</p>
+                <p className="mt-3 rounded-2xl bg-[color:var(--l-snow)] px-4 py-3 font-mono text-[13px] text-[color:var(--l-ink)]">{s.payload}</p>
               </Reveal>
             );
           })}
