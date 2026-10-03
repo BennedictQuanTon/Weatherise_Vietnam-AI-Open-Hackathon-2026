@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a73e8"/>
+      <stop offset="0.55" stop-color="#1a73e8"/>
+      <stop offset="0.75" stop-color="#34a853"/>
+      <stop offset="1" stop-color="#2e9e4f"/>
+    </linearGradient>
+    <linearGradient id="cloud" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2b8cf0"/>
+      <stop offset="1" stop-color="#155fc4"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#ffffff"/>
+  <!-- Ring: blue arc (left/top) and green arc (right/bottom), open at top-right like the logo -->
+  <path d="M44.5 9.6A26 26 0 1 0 57.3 38" fill="none" stroke="url(#ring)" stroke-width="4.2" stroke-linecap="round"/>
+  <!-- Sun rays -->
+  <g stroke="#1a73e8" stroke-width="2.6" stroke-linecap="round">
+    <path d="M44 13.5v3.2"/>
+    <path d="M51.2 16.6l-2.2 2.3"/>
+    <path d="M54.6 23.6h-3.1"/>
+  </g>
+  <path d="M38.6 25.2a7.4 7.4 0 0 1 12.2 4.6" fill="none" stroke="#1a73e8" stroke-width="2.6" stroke-linecap="round"/>
+  <!-- Cloud -->
+  <path d="M16.5 38.5c-3.6 0-6.2-2.7-6.2-6 0-3.1 2.4-5.7 5.5-6 .9-4.9 5.2-8.6 10.3-8.6 4.4 0 8.2 2.8 9.7 6.8.5-.1 1-.1 1.5-.1 4 0 7.2 3.2 7.2 7 0 3.9-3.2 6.9-7.2 6.9z" fill="url(#cloud)"/>
+  <!-- Trend line with nodes -->
+  <path d="M13 46.5l9.5-3.6 6 2.2 9.5-7.6 8.5 5.4" fill="none" stroke="#34a853" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="13" cy="46.5" r="2.6" fill="#1a73e8"/>
+  <circle cx="38" cy="37.5" r="2.8" fill="#34a853"/>
+  <circle cx="46.5" cy="42.9" r="2.4" fill="#34a853"/>
+  <!-- Wave -->
+  <path d="M12 53.5c6-3.4 11.4-3.4 17 0s11 3.4 17 0" fill="none" stroke="#1a73e8" stroke-width="3" stroke-linecap="round"/>
+</svg>

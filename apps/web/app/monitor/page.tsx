@@ -1,20 +1,10 @@
 "use client";
-import { useState, useRef, useEffect, useCallback } from "react";
-import { Sun, Moon } from "lucide-react";
 
-function apiUrl(path: string) {
-  if (typeof window === "undefined") return `http://localhost:8000${path}`;
-  return path;
-}
-
-interface LogEntry {
-  id: string;
-  ts: number;
-  level: "info" | "warn" | "error" | "success" | "step";
-  service: string;
-  message: string;
-  duration?: number;
-}
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AlertTriangle, ArrowLeft, Check, ChevronDown, Info, Loader2, Moon, OctagonAlert, Radio, Sun, Trash2 } from "lucide-react";
+import type { Report, Tone } from "@/lib/report/types";
+import { SHOWCASE_PROMPTS } from "@/lib/report/prompts";
+import { clearRuns, loadRuns, newRunId, saveRun, subscribeRuns, type RunTrace } from "@/lib/trace";
 
 interface SvcHealth {
   name: string;
@@ -31,46 +21,217 @@ const SVCS: SvcHealth[] = [
   { name: "API Backend", key: "api", status: "checking" },
 ];
 
-const SVC_COLORS: Record<string, string> = {
-  "NIM LLM": "#00e5ff", "NIM Embed": "#7c4dff", "MCP Server": "#00e676",
-  "Qdrant": "#ff9100", "API Backend": "#ff4081",
-  "Parser": "#69f0ae", "Orchestrator": "#40c4ff", "Intelligence": "#ea80fc",
-  "Pipeline": "#ffeb3b", "Monitor": "#b0bec5",
-  "MCP:time": "#ccff90", "MCP:location": "#80d8ff",
-  "MCP:weather": "#64ffda", "MCP:place": "#ffd180",
+const STATUS: Record<SvcHealth["status"], { label: string; tone: Tone }> = {
+  ok: { label: "Healthy", tone: "ok" },
+  degraded: { label: "Degraded", tone: "caution" },
+  unreachable: { label: "Unreachable", tone: "alert" },
+  checking: { label: "Checking…", tone: "neutral" },
 };
 
-function levelColor(l: string) {
-  return { info: "#546e7a", warn: "#ffb300", error: "#ff5252", success: "#e8f4f8", step: "#00e5ff" }[l] ?? "#fff";
+const DOMAIN_LABEL: Record<string, string> = {
+  tourism: "Tourism",
+  construction: "Construction",
+  agriculture: "Agriculture",
+  severe_weather: "Alerts",
+};
+
+const FILTERS: { key: string; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "tourism", label: "Tourism" },
+  { key: "construction", label: "Construction" },
+  { key: "agriculture", label: "Agriculture" },
+  { key: "severe_weather", label: "Alerts" },
+  { key: "error", label: "Errors" },
+];
+
+const EXAMPLES: { label: string; prompt: string }[] = [
+  { label: "Tourism", prompt: SHOWCASE_PROMPTS.tourism },
+  { label: "Construction", prompt: SHOWCASE_PROMPTS.construction },
+  { label: "Agriculture", prompt: SHOWCASE_PROMPTS.agriculture },
+  { label: "Alerts", prompt: SHOWCASE_PROMPTS.severe_weather },
+];
+
+const timeFmt = new Intl.DateTimeFormat("en-GB", {
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+  timeZone: "Asia/Ho_Chi_Minh",
+});
+const NB = " ";
+const ms = (v: number) => `${v.toLocaleString("en-US")}${NB}ms`;
+const sleep = (t: number) => new Promise((r) => setTimeout(r, t));
+
+// Single steps are slow above 1 s; a whole run is slow above 5 s.
+function durationTone(v: number, total = false): Tone {
+  const [slow, critical] = total ? [5000, 10000] : [1000, 5000];
+  return v > critical ? "alert" : v > slow ? "caution" : "neutral";
 }
-function durationColor(ms: number) {
-  return ms > 5000 ? "#ff5252" : ms > 1000 ? "#ffb300" : "#69f0ae";
+
+function ToneText({ tone, children }: { tone: Tone; children: React.ReactNode }) {
+  return (
+    <span data-tone={tone} className={tone === "neutral" ? "" : "text-[color:var(--tone)]"}>
+      {children}
+    </span>
+  );
 }
-function statusDot(s: string) {
-  const c = { ok: "#69f0ae", degraded: "#ffb300", unreachable: "#ff5252", checking: "#546e7a" }[s] ?? "#546e7a";
-  return <span className="inline-block w-2 h-2 rounded-full mr-1.5 animate-pulse" style={{ background: c }} />;
+
+function StatusPill({ status }: { status: SvcHealth["status"] }) {
+  const s = STATUS[status];
+  const Icon = s.tone === "ok" ? Check : s.tone === "alert" ? OctagonAlert : s.tone === "caution" ? AlertTriangle : Info;
+  return (
+    <span data-tone={s.tone} className="inline-flex items-center gap-1 text-xs font-medium text-[color:var(--tone)]">
+      {status === "checking" ? <Loader2 size={12} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <Icon size={12} aria-hidden="true" />}
+      {s.label}
+    </span>
+  );
+}
+
+function RunStatus({ run }: { run: RunTrace }) {
+  if (run.status === "running")
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-[color:var(--r-accent)]">
+        <Loader2 size={12} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> Running
+      </span>
+    );
+  if (run.status === "error")
+    return (
+      <span data-tone="alert" className="inline-flex items-center gap-1 text-xs font-medium text-[color:var(--tone)]">
+        <OctagonAlert size={12} aria-hidden="true" /> Error
+      </span>
+    );
+  return (
+    <span data-tone="ok" className="inline-flex items-center gap-1 text-xs font-medium text-[color:var(--tone)]">
+      <Check size={12} aria-hidden="true" /> Done
+    </span>
+  );
+}
+
+function Card({ title, children, className = "", aside }: { title: string; children: React.ReactNode; className?: string; aside?: React.ReactNode }) {
+  return (
+    <section className={`r-card flex min-h-0 flex-col ${className}`}>
+      <header className="flex items-center justify-between gap-2 border-b border-[color:var(--r-hair)] px-4 py-3">
+        <h2 className="text-[13px] font-semibold tracking-[-0.01em]">{title}</h2>
+        {aside}
+      </header>
+      {children}
+    </section>
+  );
+}
+
+function RunCard({ run, open, onToggle }: { run: RunTrace; open: boolean; onToggle: () => void }) {
+  const total = run.totalMs ?? run.steps.reduce((a, b) => a + b.ms, 0);
+  return (
+    <li className="border-b border-[color:var(--r-hair)] last:border-0">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="r-btn r-focus flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-[color:var(--r-subtle)]"
+      >
+        <ChevronDown
+          size={15}
+          aria-hidden="true"
+          className={`mt-0.5 shrink-0 text-[color:var(--r-muted)] transition-transform ${open ? "" : "-rotate-90"}`}
+        />
+        <span className="min-w-0 flex-1">
+          <span className="r-sans line-clamp-2 text-[13px] font-medium leading-snug text-[color:var(--r-fg)]">{run.question}</span>
+          <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[color:var(--r-muted)]">
+            <time className="font-mono tnum" dateTime={new Date(run.startedAt).toISOString()}>
+              {timeFmt.format(run.startedAt)}
+            </time>
+            {run.domain && (
+              <span className="rounded bg-[color:var(--r-subtle)] px-1.5 py-px font-medium text-[color:var(--r-fg2)]">{DOMAIN_LABEL[run.domain] ?? run.domain}</span>
+            )}
+            <span>{run.source === "monitor" ? "Quick Test" : "App"}</span>
+            <span className="tnum">
+              {run.steps.length} steps
+              {total > 0 && (
+                <>
+                  {" · "}
+                  <ToneText tone={durationTone(total, true)}>{ms(total)}</ToneText>
+                </>
+              )}
+            </span>
+          </span>
+        </span>
+        <RunStatus run={run} />
+      </button>
+
+      {open && (
+        <div className="space-y-3 px-4 pb-4 pl-11">
+          <ol className="overflow-hidden rounded-lg shadow-[var(--r-ring)]">
+            {run.steps.map((s, i) => (
+              <li
+                key={`${s.step}-${i}`}
+                className="grid grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-x-3 border-b border-[color:var(--r-hair)] bg-[color:var(--r-bg)] px-3 py-2 text-[13px] last:border-0 md:grid-cols-[22px_minmax(0,1fr)_minmax(0,180px)_80px]"
+              >
+                <span className="font-mono text-xs text-[color:var(--r-muted)] tnum">{String(i + 1).padStart(2, "0")}</span>
+                <span className="min-w-0">
+                  <span className="font-medium text-[color:var(--r-fg)]">{s.step}</span>
+                  <span className="ml-2 text-xs text-[color:var(--r-muted)] md:hidden" translate="no">
+                    {s.agent}
+                  </span>
+                </span>
+                <span className="hidden truncate font-mono text-xs text-[color:var(--r-fg2)] md:block" translate="no">
+                  {s.agent}
+                </span>
+                <span className="text-right font-mono text-xs tnum">
+                  <ToneText tone={durationTone(s.ms)}>{ms(s.ms)}</ToneText>
+                </span>
+              </li>
+            ))}
+            {run.status === "running" && (
+              <li className="flex items-center gap-2 bg-[color:var(--r-bg)] px-3 py-2 text-[13px] text-[color:var(--r-muted)]">
+                <Loader2 size={13} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> Next step…
+              </li>
+            )}
+          </ol>
+
+          {run.verdict && (
+            <p data-tone={run.verdict.tone} className="r-sans text-[13px] leading-relaxed text-[color:var(--r-fg)]">
+              <span className="font-semibold text-[color:var(--tone)]">{run.verdict.label}:</span> {run.verdict.headline}
+            </p>
+          )}
+          {run.alerts && run.alerts.length > 0 && (
+            <ul className="flex flex-wrap gap-1.5">
+              {run.alerts.map((a) => (
+                <li
+                  key={a.title}
+                  data-tone={a.tone}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[color:var(--tone-soft)] px-2.5 py-1 text-xs font-medium text-[color:var(--tone)]"
+                >
+                  {a.tone === "alert" ? <OctagonAlert size={12} aria-hidden="true" /> : <AlertTriangle size={12} aria-hidden="true" />}
+                  {a.title} · {a.window}
+                </li>
+              ))}
+            </ul>
+          )}
+          {run.error && (
+            <p data-tone="alert" className="text-[13px] text-[color:var(--tone)]">
+              {run.error}
+            </p>
+          )}
+        </div>
+      )}
+    </li>
+  );
 }
 
 export default function MonitorPage() {
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [runs, setRuns] = useState<RunTrace[]>([]);
+  const [openId, setOpenId] = useState<string | null>(null);
   const [svcs, setSvcs] = useState<SvcHealth[]>(SVCS);
   const [filter, setFilter] = useState("all");
-  const [autoScroll, setAutoScroll] = useState(true);
-  const [connected, setConnected] = useState(false);
-  const [testInput, setTestInput] = useState("Can I go to Han Market next 3 days?");
+  const [testInput, setTestInput] = useState<string>(SHOWCASE_PROMPTS.construction);
   const [testing, setTesting] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const esRef = useRef<EventSource | null>(null);
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
-    const saved = localStorage.getItem("theme") as "light" | "dark" | null;
-    if (saved) {
-      setTheme(saved);
-      document.documentElement.className = saved;
-    } else {
-      document.documentElement.className = "dark";
-    }
+    document.title = "Pipeline Monitor · Weatherise";
+    const saved = (localStorage.getItem("theme") as "light" | "dark" | null) ?? "light";
+    setTheme(saved);
+    document.documentElement.className = saved;
   }, []);
 
   const toggleTheme = () => {
@@ -80,53 +241,34 @@ export default function MonitorPage() {
     document.documentElement.className = next;
   };
 
-  // Push log entry
-  const push = useCallback((entry: LogEntry) => {
-    setLogs(prev => [...prev.slice(-800), entry]);
+  // Runs: load what's stored, then follow every update from the app (other tabs) live.
+  useEffect(() => {
+    const apply = (next: RunTrace[]) => {
+      setRuns(next);
+      const latest = next[next.length - 1];
+      if (latest?.status === "running") setOpenId(latest.id);
+    };
+    const initial = loadRuns();
+    setRuns(initial);
+    setOpenId(initial[initial.length - 1]?.id ?? null);
+    return subscribeRuns(apply);
   }, []);
 
-  // Connect SSE directly to API (bypass Next.js proxy which buffers SSE)
-  useEffect(() => {
-    let retryTimer: ReturnType<typeof setTimeout>;
-    const connect = () => {
-      if (esRef.current) { esRef.current.close(); esRef.current = null; }
-      // Direct connection to API — skips Next.js rewrite buffering
-      const url = apiUrl("/api/monitor/stream");
-      const es = new EventSource(url);
-      esRef.current = es;
-
-      es.onopen = () => setConnected(true);
-      es.onerror = () => {
-        setConnected(false);
-        es.close();
-        retryTimer = setTimeout(connect, 3000);
-      };
-      es.onmessage = (e) => {
-        try {
-          const entry = JSON.parse(e.data);
-          if (entry.type === "ping") return;
-          push(entry as LogEntry);
-        } catch {}
-      };
-    };
-    connect();
-    return () => { clearTimeout(retryTimer); esRef.current?.close(); };
-  }, [push]);
-
-  // Check service health — direct to API (CORS is open)
   const checkHealth = useCallback(async () => {
     const t0 = Date.now();
     try {
-      const r = await fetch(apiUrl("/health"), { signal: AbortSignal.timeout(5000) });
+      const r = await fetch("/health", { signal: AbortSignal.timeout(5000) });
       const d = await r.json();
       const apiLatency = Date.now() - t0;
-      setSvcs(prev => prev.map(svc => {
-        if (svc.key === "api") return { ...svc, status: "ok", latency: apiLatency };
-        const s = d.services?.[svc.key];
-        return { ...svc, status: s === "ok" ? "ok" : s === "degraded" ? "degraded" : "unreachable" };
-      }));
+      setSvcs((prev) =>
+        prev.map((svc) => {
+          if (svc.key === "api") return { ...svc, status: "ok", latency: apiLatency };
+          const s = d.services?.[svc.key];
+          return { ...svc, status: s === "ok" ? "ok" : s === "degraded" ? "degraded" : "unreachable" };
+        }),
+      );
     } catch {
-      setSvcs(prev => prev.map(s => ({ ...s, status: "unreachable" })));
+      setSvcs((prev) => prev.map((s) => ({ ...s, status: "unreachable" })));
     }
   }, []);
 
@@ -136,187 +278,271 @@ export default function MonitorPage() {
     return () => clearInterval(t);
   }, [checkHealth]);
 
-  // Autoscroll
-  useEffect(() => {
-    if (autoScroll) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [logs, autoScroll]);
+  // Same-tab saves don't trigger the broadcast listener, so update local state too.
+  const record = (run: RunTrace) => {
+    saveRun(run);
+    setRuns(loadRuns());
+  };
 
-  // Inline pipeline test — directly to API
   const runTest = async () => {
-    if (testing) return;
+    const q = testInput.trim();
+    if (testing || !q) return;
     setTesting(true);
-    push({ id: Date.now().toString(), ts: Date.now(), level: "info", service: "Monitor", message: `▶ Quick Test: "${testInput}"` });
+    const run: RunTrace = { id: newRunId(), question: q, source: "monitor", startedAt: Date.now(), status: "running", steps: [] };
+    setOpenId(run.id);
+    record(run);
     try {
-      const r = await fetch(apiUrl("/api/chat"), {
+      const r = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: testInput }),
+        body: JSON.stringify({ message: q }),
       });
-      const d = await r.json();
-      // result will come via SSE stream automatically
-      push({ id: Date.now().toString(), ts: Date.now(), level: "info", service: "Monitor", message: `HTTP response received (logs above via SSE)` });
+      if (!r.ok) throw new Error(`API returned status ${r.status}.`);
+      const d: { report?: Report; domain?: string } = await r.json();
+      const report = d.report;
+      if (!report) throw new Error("The response had no report. Check the backend response shape.");
+      run.domain = report.domain;
+      run.title = report.title;
+      for (const p of report.sources.pipeline) {
+        await sleep(Math.min(200, p.ms * 0.45));
+        run.steps = [...run.steps, { ...p, at: Date.now() }];
+        record({ ...run });
+      }
+      record({
+        ...run,
+        status: "done",
+        totalMs: report.sources.pipeline.reduce((a, b) => a + b.ms, 0),
+        verdict: { label: report.verdict.label, headline: report.verdict.headline, tone: report.verdict.tone },
+        alerts: report.alerts.map((a) => ({ title: a.title, window: a.window, tone: a.tone })),
+      });
     } catch (e: any) {
-      push({ id: Date.now().toString(), ts: Date.now(), level: "error", service: "Monitor", message: `Test failed: ${e.message}` });
+      record({ ...run, status: "error", error: `${e.message} Check that the app server is running, then run the test again.` });
     }
     setTesting(false);
   };
 
-  const filtered = filter === "all" ? logs : logs.filter(l =>
-    l.level === filter || l.service.toLowerCase().includes(filter)
-  );
+  const ordered = useMemo(() => [...runs].reverse(), [runs]);
+  const filtered = ordered.filter((r) => (filter === "all" ? true : filter === "error" ? r.status === "error" : r.domain === filter));
+  const selected = runs.find((r) => r.id === openId) ?? ordered[0];
+  const maxStep = Math.max(...(selected?.steps.map((s) => s.ms) ?? [1]), 1);
+  const done = runs.filter((r) => r.status === "done");
+  const avg = done.length ? Math.round(done.reduce((a, r) => a + (r.totalMs ?? 0), 0) / done.length) : 0;
+  const stats = [
+    { label: "Runs", value: String(runs.length), tone: "neutral" as Tone },
+    { label: "Avg Run", value: done.length ? ms(avg) : "—", tone: "neutral" as Tone },
+    { label: "Alerts Raised", value: String(runs.reduce((a, r) => a + (r.alerts?.length ?? 0), 0)), tone: "caution" as Tone },
+    { label: "Errors", value: String(runs.filter((r) => r.status === "error").length), tone: "alert" as Tone },
+  ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--bg-primary)] text-[var(--color-text-primary)] font-mono text-xs transition-colors duration-300">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-[var(--color-border)] bg-[var(--bg-primary)]/90 backdrop-blur px-5 py-3 flex items-center justify-between transition-colors duration-300">
-        <div className="flex items-center gap-3">
-          <span className={`w-2 h-2 rounded-full ${connected ? "bg-emerald-400 animate-pulse" : "bg-red-500"}`} />
-          <span className="text-[var(--color-brand)] font-bold text-sm tracking-widest uppercase">Weatherise Monitor</span>
-          <span className="text-[var(--color-text-muted)] text-[10px]">Real-time Pipeline Inspector</span>
-          <span className={`text-[10px] px-2 py-0.5 rounded-full ${connected ? "bg-emerald-900/40 text-emerald-400" : "bg-red-900/40 text-red-400"}`}>
-            {connected ? "SSE Connected" : "Reconnecting..."}
+    <div className="report flex min-h-screen flex-col bg-[color:var(--r-page)] text-[color:var(--r-fg)]">
+      <header className="sticky top-0 z-50 flex h-14 items-center justify-between gap-3 border-b border-[color:var(--r-hair)] bg-[color:var(--r-bg)] px-4 md:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <a href="/" className="r-focus flex items-center gap-2 rounded-md" aria-label="Weatherise home">
+            <img src="/favicon.svg" alt="" width={28} height={28} className="h-7 w-7 rounded-md" />
+            <span className="hidden text-[15px] font-semibold tracking-[-0.03em] sm:inline">Weatherise</span>
+          </a>
+          <span aria-hidden="true" className="text-[color:var(--r-hair)]">
+            /
+          </span>
+          <h1 className="truncate text-[15px] font-semibold tracking-[-0.03em]">Pipeline Monitor</h1>
+          <span
+            data-tone="ok"
+            className="hidden items-center gap-1.5 rounded-full bg-[color:var(--tone-soft)] px-2.5 py-0.5 text-xs font-medium text-[color:var(--tone)] md:inline-flex"
+          >
+            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[color:var(--tone)]" />
+            Synced with App
           </span>
         </div>
-        <div className="flex items-center gap-4">
-          <a href="/" className="text-[10px] text-[var(--color-text-secondary)] hover:text-[var(--color-brand)] transition-colors">← Chat</a>
-          <button onClick={() => setLogs([])} className="text-[10px] text-[var(--color-text-secondary)] hover:text-red-400 transition-colors">✕ Clear</button>
-          <label className="flex items-center gap-1 cursor-pointer text-[10px] text-[var(--color-text-secondary)]">
-            <input type="checkbox" checked={autoScroll} onChange={e => setAutoScroll(e.target.checked)} className="w-3 h-3" />
-            Auto-scroll
-          </label>
-          
-          {/* Theme Toggle */}
-          <button onClick={toggleTheme} className="p-1 rounded bg-[var(--bg-tertiary)] hover:bg-[var(--bg-tertiary-hover)] border border-[var(--color-border-subtle)] text-[var(--color-text-primary)] transition-all" title="Toggle theme">
-            {theme === "dark" ? <Sun size={12} /> : <Moon size={12} />}
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              clearRuns();
+              setRuns([]);
+            }}
+            className="r-btn r-focus inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[13px] text-[color:var(--r-fg2)] hover:bg-[color:var(--r-subtle)] hover:text-[color:var(--r-fg)]"
+          >
+            <Trash2 size={14} aria-hidden="true" /> Clear Log
+          </button>
+          <a
+            href="/app"
+            className="r-btn r-focus inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[13px] text-[color:var(--r-fg2)] hover:bg-[color:var(--r-subtle)] hover:text-[color:var(--r-fg)]"
+          >
+            <ArrowLeft size={14} aria-hidden="true" /> Back to App
+          </a>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            className="r-btn r-focus inline-flex h-8 w-8 items-center justify-center rounded-md text-[color:var(--r-fg2)] shadow-[var(--r-ring)] hover:text-[color:var(--r-fg)]"
+          >
+            {theme === "dark" ? <Sun size={15} aria-hidden="true" /> : <Moon size={15} aria-hidden="true" />}
           </button>
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden" style={{ height: "calc(100vh - 48px)" }}>
+      <div className="grid flex-1 grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-56px)] lg:grid-cols-[264px_minmax(0,1fr)_240px] lg:overflow-hidden">
+        {/* Left: health + quick test */}
+        <div className="flex min-h-0 flex-col gap-4">
+          <Card title="Service Health" aside={<span className="text-xs text-[color:var(--r-muted)]">Every 8 s</span>}>
+            <ul className="divide-y divide-[color:var(--r-hair)]">
+              {svcs.map((s) => (
+                <li key={s.key} className="flex items-center justify-between gap-2 px-4 py-2.5">
+                  <span className="text-[13px] font-medium">{s.name}</span>
+                  <span className="flex items-center gap-2">
+                    {s.latency !== undefined && <span className="font-mono text-xs text-[color:var(--r-muted)] tnum">{ms(s.latency)}</span>}
+                    <StatusPill status={s.status} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
 
-        {/* Left: services + test */}
-        <aside className="w-56 shrink-0 border-r border-[var(--color-border)] flex flex-col bg-[var(--sidebar-bg)] transition-colors duration-300">
-          {/* Health */}
-          <div className="px-3 py-2.5 border-b border-[var(--color-border)] text-[10px] text-[var(--color-text-muted)] uppercase tracking-widest">Service Health</div>
-          <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
-            {svcs.map(s => (
-              <div key={s.key} className="rounded-lg px-3 py-2 bg-[var(--card-bg)] border border-[var(--card-border)]">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    {statusDot(s.status)}
-                    <span className="text-[11px] font-semibold" style={{ color: SVC_COLORS[s.name] ?? "var(--color-text-secondary)" }}>{s.name}</span>
-                  </div>
-                  {s.latency !== undefined && (
-                    <span className="text-[10px]" style={{ color: durationColor(s.latency) }}>{s.latency}ms</span>
-                  )}
-                </div>
-                <div className="text-[10px] text-[var(--color-text-muted)] mt-0.5 capitalize pl-3.5">{s.status}</div>
+          <Card title="Quick Test">
+            <form
+              className="flex flex-col gap-3 p-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                runTest();
+              }}
+            >
+              <label htmlFor="quick-test" className="sr-only">
+                Question to test
+              </label>
+              <textarea
+                id="quick-test"
+                value={testInput}
+                onChange={(e) => setTestInput(e.target.value)}
+                rows={5}
+                placeholder="Ask a question to trace through the pipeline…"
+                className="h-36 resize-none rounded-lg bg-[color:var(--r-bg)] p-3 text-base leading-relaxed text-[color:var(--r-fg)] shadow-[var(--r-ring)] outline-none placeholder:text-[color:var(--r-muted)] focus:shadow-[0_0_0_2px_var(--r-focus)] lg:text-[13px]"
+              />
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Example questions">
+                {EXAMPLES.map((ex) => (
+                  <button
+                    key={ex.label}
+                    type="button"
+                    onClick={() => setTestInput(ex.prompt)}
+                    aria-pressed={testInput === ex.prompt}
+                    className={`r-btn r-focus rounded-full px-2.5 py-1 text-xs font-medium ${
+                      testInput === ex.prompt
+                        ? "bg-[color:var(--r-fg)] text-[color:var(--r-bg)]"
+                        : "bg-[color:var(--r-subtle)] text-[color:var(--r-fg2)] hover:text-[color:var(--r-fg)]"
+                    }`}
+                  >
+                    {ex.label}
+                  </button>
+                ))}
               </div>
-            ))}
-          </div>
+              <button
+                type="submit"
+                disabled={testing || !testInput.trim()}
+                className="r-btn r-focus inline-flex items-center justify-center gap-2 rounded-md bg-[color:var(--r-fg)] px-3 py-2 text-[13px] font-medium text-[color:var(--r-bg)] disabled:opacity-60"
+              >
+                {testing && <Loader2 size={14} className="animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+                Run Test
+              </button>
+            </form>
+          </Card>
+        </div>
 
-          {/* Pipeline tester */}
-          <div className="border-t border-[var(--color-border)] p-3">
-            <div className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-widest mb-2">Quick Test</div>
-            <textarea
-              value={testInput}
-              onChange={e => setTestInput(e.target.value)}
-              rows={3}
-              className="w-full bg-[var(--bg-tertiary)] border border-[var(--color-border-subtle)] rounded-lg p-2 text-[11px] text-[var(--color-text-primary)] resize-none outline-none focus:border-[var(--color-brand)] mb-2 leading-relaxed"
-            />
-            <button onClick={runTest} disabled={testing}
-              className="w-full py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all"
-              style={{ background: testing ? "rgba(0,180,255,0.08)" : "rgba(0,100,200,0.4)", color: testing ? "var(--color-text-muted)" : "var(--color-brand)", border: "1px solid var(--color-border)", cursor: testing ? "not-allowed" : "pointer" }}>
-              {testing ? "⏳ Running..." : "▶ Run Test"}
-            </button>
-            <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5 text-center">Logs appear in stream →</p>
-          </div>
-        </aside>
-
-        {/* Center: log stream */}
-        <main className="flex-1 flex flex-col overflow-hidden">
-          {/* Filter bar */}
-          <div className="border-b border-[var(--color-border)] px-4 py-2 flex items-center gap-1.5 bg-[var(--bg-secondary)] shrink-0 transition-colors duration-300">
-            <span className="text-[10px] text-[var(--color-text-muted)] mr-1">Filter:</span>
-            {["all","step","success","error","warn","parser","intelligence","mcp","orchestrator"].map(f => (
-              <button key={f} onClick={() => setFilter(f)}
-                className={`px-2 py-0.5 rounded text-[10px] uppercase tracking-wider transition-all ${filter === f ? "bg-cyan-900/50 text-cyan-300 border border-cyan-800/50" : "text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"}`}>
-                {f}
+        {/* Center: one entry per question */}
+        <Card
+          title="Runs"
+          className="min-h-[420px]"
+          aside={
+            <span className="text-xs text-[color:var(--r-muted)] tnum">
+              {filtered.length} {filtered.length === 1 ? "run" : "runs"} · kept after refresh
+            </span>
+          }
+        >
+          <div className="flex flex-wrap gap-1 border-b border-[color:var(--r-hair)] px-3 py-2" role="group" aria-label="Filter runs">
+            {FILTERS.map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => setFilter(f.key)}
+                aria-pressed={filter === f.key}
+                className={`r-btn r-focus rounded-md px-2.5 py-1 text-xs font-medium ${
+                  filter === f.key
+                    ? "bg-[color:var(--r-subtle)] text-[color:var(--r-fg)] shadow-[var(--r-ring)]"
+                    : "text-[color:var(--r-muted)] hover:text-[color:var(--r-fg)]"
+                }`}
+              >
+                {f.label}
               </button>
             ))}
-            <span className="ml-auto text-[10px] text-[var(--color-text-muted)]">{filtered.length} entries</span>
           </div>
 
-          {/* Logs */}
-          <div className="flex-1 overflow-y-auto px-4 py-1">
-            {filtered.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-[var(--color-text-muted)] gap-3">
-                <span className="text-4xl animate-pulse">📡</span>
-                <p className="text-[11px]">{connected ? "Waiting for pipeline events..." : "Connecting to API stream..."}</p>
-                <p className="text-[10px] text-[var(--color-text-muted)] opacity-70">Send a message in the chat or run a Quick Test</p>
+          <div className="min-h-0 flex-1 overflow-y-auto [overscroll-behavior:contain]" aria-live="polite">
+            {filtered.length === 0 ? (
+              <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-2 px-6 text-center">
+                <Radio size={20} className="text-[color:var(--r-muted)]" aria-hidden="true" />
+                <p className="text-[13px] font-medium">No Runs Yet</p>
+                <p className="text-xs text-[color:var(--r-muted)]">
+                  Ask a question in the{" "}
+                  <a href="/app" className="r-focus rounded-sm text-[color:var(--r-accent)] underline-offset-2 hover:underline">
+                    app
+                  </a>{" "}
+                  or run a Quick Test. Each step appears here as it runs.
+                </p>
               </div>
+            ) : (
+              <ul>
+                {filtered.map((run) => (
+                  <RunCard key={run.id} run={run} open={run.id === selected?.id} onToggle={() => setOpenId(run.id === openId ? null : run.id)} />
+                ))}
+              </ul>
             )}
-            {filtered.map(log => (
-              <div key={log.id} className="flex items-start gap-2 py-0.5 border-b border-white/[0.02] hover:bg-white/[0.015] group">
-                <span className="text-[10px] text-[var(--color-text-muted)] shrink-0 w-20 pt-px">{new Date(log.ts).toISOString().slice(11, 23)}</span>
-                <span className="text-[10px] font-bold shrink-0 w-24 truncate pt-px" style={{ color: SVC_COLORS[log.service] ?? "var(--color-text-muted)" }}>
-                  [{log.service}]
-                </span>
-                <span className="text-[10px] shrink-0 w-12 pt-px" style={{ color: levelColor(log.level) }}>
-                  {log.level.toUpperCase()}
-                </span>
-                <span className="flex-1 text-[11px] leading-relaxed break-all" style={{ color: log.level === "error" ? "#ef9a9a" : log.level === "success" ? "var(--color-text-primary)" : "var(--color-text-secondary)" }}>
-                  {log.message}
-                </span>
-                {log.duration !== undefined && (
-                  <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded ml-1 font-mono"
-                    style={{ background: `${durationColor(log.duration)}15`, color: durationColor(log.duration) }}>
-                    {log.duration}ms
-                  </span>
-                )}
-              </div>
-            ))}
-            <div ref={bottomRef} />
           </div>
-        </main>
+        </Card>
 
-        {/* Right: latency chart */}
-        <aside className="w-48 shrink-0 border-l border-[var(--color-border)] flex flex-col bg-[var(--sidebar-bg)] transition-colors duration-300">
-          <div className="px-3 py-2.5 border-b border-[var(--color-border)] text-[10px] text-[var(--color-text-muted)] uppercase tracking-widest">Step Latency</div>
-          <div className="flex-1 overflow-y-auto p-3 space-y-3">
-            {(() => {
-              const withDur = logs.filter(l => l.level === "success" && l.duration !== undefined).slice(-15);
-              if (!withDur.length) return <p className="text-[10px] text-[var(--color-text-muted)] text-center mt-6">No data yet</p>;
-              const max = Math.max(...withDur.map(l => l.duration ?? 0), 1);
-              return withDur.map(l => (
-                <div key={l.id}>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-[10px] truncate" style={{ color: SVC_COLORS[l.service] ?? "var(--color-text-muted)" }}>{l.service}</span>
-                    <span className="text-[10px] font-mono" style={{ color: durationColor(l.duration ?? 0) }}>{l.duration}ms</span>
-                  </div>
-                  <div className="h-1 rounded-full bg-[var(--bg-tertiary)]">
-                    <div className="h-full rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min(((l.duration ?? 0) / max) * 100, 100)}%`, background: durationColor(l.duration ?? 0) }} />
-                  </div>
+        {/* Right: selected run latency + stats */}
+        <div className="flex min-h-0 flex-col gap-4">
+          <Card title="Step Latency" className="flex-1" aside={<span className="text-xs text-[color:var(--r-muted)]">Selected Run</span>}>
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+              {!selected || selected.steps.length === 0 ? (
+                <p className="pt-4 text-center text-xs text-[color:var(--r-muted)]">No timed steps yet.</p>
+              ) : (
+                selected.steps.map((s, i) => {
+                  const tone = durationTone(s.ms);
+                  return (
+                    <div key={`${s.step}-${i}`} data-tone={tone}>
+                      <div className="mb-1 flex items-baseline justify-between gap-2 text-xs">
+                        <span className="truncate text-[color:var(--r-fg2)]">{s.step}</span>
+                        <span className={`font-mono tnum ${tone === "neutral" ? "text-[color:var(--r-fg)]" : "text-[color:var(--tone)]"}`}>{ms(s.ms)}</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-[color:var(--r-subtle)]">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${Math.max(4, (s.ms / maxStep) * 100)}%`, background: tone === "neutral" ? "var(--r-series)" : "var(--tone)" }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </Card>
+
+          <Card title="Stats">
+            <dl className="grid grid-cols-2 gap-px bg-[color:var(--r-hair)]">
+              {stats.map((s) => (
+                <div key={s.label} data-tone={s.tone} className="bg-[color:var(--r-bg)] px-4 py-3">
+                  <dt className="text-xs text-[color:var(--r-muted)]">{s.label}</dt>
+                  <dd
+                    className={`text-[20px] font-semibold tracking-[-0.04em] tnum ${
+                      s.value !== "0" && (s.tone === "alert" || s.tone === "caution") ? "text-[color:var(--tone)]" : ""
+                    }`}
+                  >
+                    {s.value}
+                  </dd>
                 </div>
-              ));
-            })()}
-          </div>
-          {/* Stats */}
-          <div className="border-t border-cyan-900/15 p-3 space-y-2">
-            <div className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">Stats</div>
-            {[
-              { label: "Total events", value: logs.length },
-              { label: "Errors", value: logs.filter(l => l.level === "error").length },
-              { label: "Pipelines", value: logs.filter(l => l.service === "Pipeline" && l.level === "success").length },
-            ].map(s => (
-              <div key={s.label} className="flex justify-between">
-                <span className="text-[10px] text-gray-700">{s.label}</span>
-                <span className={`text-[10px] font-bold ${s.label === "Errors" && s.value > 0 ? "text-red-400" : "text-gray-300"}`}>{s.value}</span>
-              </div>
-            ))}
-          </div>
-        </aside>
+              ))}
+            </dl>
+          </Card>
+        </div>
       </div>
     </div>
   );
