@@ -4,7 +4,7 @@
 //   node video/render.mjs ask rules      # selected reels
 //
 // Needs: Google Chrome (CHROME_PATH to override), ffmpeg on PATH, puppeteer-core (dev dependency).
-// Frames come from video/reels.html at 30 fps, 1920×1080; sound effects are synthesized with ffmpeg
+// Frames come from video/reels.html at 30 fps, 1920×1248 (MacBook Pro screen ratio); sound effects are synthesized with ffmpeg
 // and placed on each reel's cue list over a soft ambient pad.
 
 import { execFileSync } from "node:child_process";
@@ -74,7 +74,7 @@ function mixAudio(dir, reel, cues, duration, out) {
 // ── Frames ───────────────────────────────────────────────────────────────
 async function renderFrames(browser, reel, dir) {
   const page = await browser.newPage();
-  await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 1 });
+  await page.setViewport({ width: 1920, height: 1248, deviceScaleFactor: 1 });
   await page.goto(`${pathToFileURL(join(ROOT, "reels.html")).href}?reel=${reel}`, { waitUntil: "networkidle0" });
   await page.evaluate(() => document.fonts.ready);
   const { duration, cues } = await page.evaluate(() => ({ duration: window.REEL.duration, cues: window.REEL.cues }));

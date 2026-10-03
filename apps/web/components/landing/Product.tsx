@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, CloudSun, DatabaseZap, GitMerge, MessageSquareText, ShieldCheck, Sparkles, Volume2, VolumeX, Workflow } from "lucide-react";
 import { DOMAINS, FEATURES, PIPELINE } from "./content";
-import { MaskHeading, Reveal, prefersReducedMotion, useInView, useStickyProgress } from "./motion";
+import { MaskHeading, Reveal, prefersReducedMotion, useStickyProgress } from "./motion";
+import { MacBookPro } from "./Devices";
+import Slider from "./Slider";
 import { STACK_ICONS, type StackIcon } from "./stackIcons";
 
 export function Intro() {
@@ -48,121 +50,115 @@ export function Intro() {
 
 const UNMUTE_EVENT = "weatherise:unmute";
 
-function FeatureVideo({ src, poster, title }: { src: string; poster: string; title: string }) {
-  const [ref, inView] = useInView<HTMLDivElement>({ threshold: 0.35 });
+/** One product-tour slide: the reel plays inside a MacBook; when it ends, the slider moves on. */
+function FeatureSlide({
+  feature,
+  active,
+  onEnded,
+}: {
+  feature: (typeof FEATURES)[number];
+  active: boolean;
+  onEnded: () => void;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [muted, setMuted] = useState(true);
   const [failed, setFailed] = useState(false);
 
-  // Play while visible; pause when scrolled away.
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    const io = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting && !prefersReducedMotion()) v.play().catch(() => {});
-      else v.pause();
-    }, { threshold: 0.35 });
-    io.observe(v);
-    return () => io.disconnect();
-  }, []);
+    if (active && !prefersReducedMotion()) {
+      v.currentTime = 0;
+      v.play().catch(() => {});
+    } else {
+      v.pause();
+    }
+  }, [active]);
 
   // Only one reel plays with sound at a time.
   useEffect(() => {
     const onOther = (e: Event) => {
-      if ((e as CustomEvent).detail !== src && videoRef.current) {
+      if ((e as CustomEvent).detail !== feature.video && videoRef.current) {
         videoRef.current.muted = true;
         setMuted(true);
       }
     };
     window.addEventListener(UNMUTE_EVENT, onOther);
     return () => window.removeEventListener(UNMUTE_EVENT, onOther);
-  }, [src]);
+  }, [feature.video]);
 
-  const toggle = () => {
+  const toggleSound = (e: React.MouseEvent) => {
+    e.stopPropagation();
     const v = videoRef.current;
     if (!v) return;
     v.muted = !v.muted;
     setMuted(v.muted);
     if (!v.muted) {
-      window.dispatchEvent(new CustomEvent(UNMUTE_EVENT, { detail: src }));
+      window.dispatchEvent(new CustomEvent(UNMUTE_EVENT, { detail: feature.video }));
       v.play().catch(() => {});
     }
   };
 
   return (
-    <div ref={ref} className={`l-reveal-scale ${inView ? "is-in" : ""} relative overflow-hidden rounded-[24px] bg-white shadow-[var(--l-shadow)]`}>
-      {failed ? (
-        <img src={poster} alt={title} className="block aspect-video w-full object-cover" />
-      ) : (
-        <video
-          ref={videoRef}
-          className="block aspect-video w-full bg-white object-cover"
-          src={src}
-          poster={poster}
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          aria-label={`${title} — product demo video`}
-          onError={() => setFailed(true)}
-        />
-      )}
-      {!failed && (
+    <article className="relative flex h-full flex-col">
+      <div className="mx-auto w-full max-w-[860px] px-[5%] pt-10 md:px-0 md:pt-14">
+        <MacBookPro>
+          {failed ? (
+            <img src={feature.poster} alt={feature.title} className="absolute inset-0 h-full w-full object-cover" />
+          ) : (
+            <video
+              ref={videoRef}
+              className="absolute inset-0 h-full w-full object-cover"
+              src={feature.video}
+              poster={feature.poster}
+              muted
+              playsInline
+              preload="metadata"
+              aria-label={`${feature.title}: product demo`}
+              onEnded={() => active && onEnded()}
+              onError={() => setFailed(true)}
+            />
+          )}
+        </MacBookPro>
+      </div>
+      <div className="mx-auto max-w-[760px] px-6 pb-12 pt-4 text-center md:pb-14">
+        <h3 className="l-slide-title">{feature.title}</h3>
+        <p className="l-slide-sub mt-3">{feature.body}</p>
+      </div>
+      {!failed && active && (
         <button
           type="button"
-          onClick={toggle}
-          aria-label={muted ? `Turn Sound On for ${title}` : `Turn Sound Off for ${title}`}
-          className="l-btn absolute bottom-4 right-4 h-10 gap-1.5 bg-white/90 px-3.5 text-[14px] text-[color:var(--l-ink)] shadow-[0_4px_16px_rgba(16,16,16,0.15)] backdrop-blur hover:bg-white"
+          onClick={toggleSound}
+          aria-label={muted ? `Turn Sound On for ${feature.title}` : `Turn Sound Off for ${feature.title}`}
+          className="l-arrow absolute right-5 top-5 !h-10 !w-auto gap-1.5 px-3.5 text-[14px] font-medium md:right-7 md:top-7"
         >
           {muted ? <VolumeX size={16} aria-hidden="true" /> : <Volume2 size={16} aria-hidden="true" />}
           {muted ? "Sound On" : "Sound Off"}
         </button>
       )}
-    </div>
+    </article>
   );
 }
 
 export function Features() {
+  const [index, setIndex] = useState(0);
   return (
     <section className="l-section l-snow" aria-labelledby="features-heading">
-      <div className="l-container">
-        <div className="mx-auto max-w-[760px] text-center">
-          <Reveal>
-            <p className="l-eyebrow">Product Tour</p>
-          </Reveal>
-          <MaskHeading id="features-heading" className="l-heading-lg mt-3" lines={["See it work."]} />
-          <Reveal delay={150}>
-            <p className="l-sub mt-5">Four capabilities, one answer. Turn the sound on for the full tour.</p>
-          </Reveal>
-        </div>
-
-        <div className="mt-16 space-y-24 md:mt-20 md:space-y-32">
-          {FEATURES.map((f, i) => (
-            <div key={f.id} className={`grid items-center gap-10 md:grid-cols-[0.8fr_1.2fr] md:gap-16 ${i % 2 ? "md:[&>*:first-child]:order-2 md:grid-cols-[1.2fr_0.8fr]" : ""}`}>
-              <div>
-                <Reveal>
-                  <span className="text-[15px] font-semibold text-[color:var(--l-pewter)] tnum">0{i + 1}</span>
-                </Reveal>
-                <MaskHeading as="h3" className="l-heading mt-2" lines={[f.title]} />
-                <Reveal delay={150}>
-                  <p className="l-body mt-4 !text-[17px] !leading-[26px]">{f.body}</p>
-                  <ul className="mt-6 space-y-3">
-                    {f.points.map((pt) => (
-                      <li key={pt} className="flex gap-3 text-[15px] leading-snug text-[color:var(--l-ink)]">
-                        <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[rgba(52,199,89,0.15)] text-[#1f8f3a]">
-                          <Check size={12} strokeWidth={3} aria-hidden="true" />
-                        </span>
-                        {pt}
-                      </li>
-                    ))}
-                  </ul>
-                </Reveal>
-              </div>
-              <FeatureVideo src={f.video} poster={f.poster} title={f.title} />
-            </div>
-          ))}
-        </div>
+      <div className="l-container text-center">
+        <MaskHeading id="features-heading" className="l-heading-lg" lines={["See it work."]} />
+        <Reveal delay={150}>
+          <p className="l-hero-sub mx-auto mt-4 max-w-[620px]">Four capabilities, one answer. Turn the sound on for the full tour.</p>
+        </Reveal>
       </div>
+      <Reveal delay={150} className="mt-12 md:mt-16">
+        <Slider
+          count={FEATURES.length}
+          label="Product tour"
+          index={index}
+          onIndexChange={setIndex}
+          render={(i, active) => <FeatureSlide feature={FEATURES[i]} active={active} onEnded={() => setIndex((i + 1) % FEATURES.length)} />}
+        />
+      </Reveal>
     </section>
   );
 }

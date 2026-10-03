@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <style>
-  /* Product-UI tokens (same as the app's report view). Stage: 1280×720, scaled to 1080p by the renderer. */
+  /* Product-UI tokens (same as the app's report view). Stage: 1280×832 (MacBook Pro screen ratio), scaled ×1.5 by the renderer. */
   :root {
     --bg: #fafafa; --card: #fff; --fg: #171717; --fg2: #4d4d4d; --muted: #6b6b6b; --hair: #ebebeb; --subtle: #f5f5f5;
     --ring: 0 0 0 1px rgba(0,0,0,0.08), 0 2px 2px rgba(0,0,0,0.04);
@@ -16,13 +16,24 @@
     --green: #34c759; --orange: #f06413;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+  html, body { width: 1920px; height: 1248px; overflow: hidden; background: var(--bg); }
   #stage {
-    position: relative; width: 1280px; height: 720px; transform: scale(1.5); transform-origin: 0 0;
+    position: relative; width: 1280px; height: 832px; transform: scale(1.5); transform-origin: 0 0;
     font-family: Geist, system-ui, sans-serif; color: var(--fg); -webkit-font-smoothing: antialiased;
-    background: radial-gradient(70% 60% at 50% 0%, rgba(10,114,239,0.07), transparent 70%), var(--bg);
+    /* Same Da Nang wallpaper as the app's home dashboard, with a light veil so cards stay crisp */
+    background: linear-gradient(180deg, rgba(255,255,255,0.30), rgba(255,255,255,0.12) 45%, rgba(255,255,255,0.22)), url("../public/landing/devices/wallpaper.jpg") center / cover;
     overflow: hidden;
   }
+  #content { position: absolute; left: 0; top: 70px; width: 1280px; height: 720px; }
+  .menubar {
+    position: absolute; inset: 0 0 auto 0; height: 28px; display: flex; align-items: center; gap: 18px; padding: 0 16px;
+    background: rgba(255,255,255,0.55); backdrop-filter: blur(20px) saturate(1.6); -webkit-backdrop-filter: blur(20px) saturate(1.6);
+    font-size: 13px; color: #1d1d1f; box-shadow: 0 1px 0 rgba(0,0,0,0.06);
+  }
+  .menubar img { width: 16px; height: 16px; }
+  .menubar b { font-weight: 700; }
+  .menubar .right { margin-left: auto; display: flex; gap: 16px; align-items: center; }
+  .glass { background: rgba(255,255,255,0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-radius: 999px; padding: 6px 12px; box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset, 0 4px 14px rgba(16,16,16,0.08); }
   .abs { position: absolute; }
   .card { background: var(--card); border-radius: 16px; box-shadow: var(--lift); }
   .mono { font-family: "Geist Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
@@ -41,7 +52,7 @@
 </style>
 </head>
 <body>
-<div id="stage"></div>
+<div id="stage"><div id="content"></div></div>
 <script>
 // ── Timeline helpers ─────────────────────────────────────────────────────
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -52,7 +63,8 @@ const prog = (t, start, dur) => clamp((t - start) / dur);
 const lerp = (a, b, p) => a + (b - a) * p;
 const $ = (html) => { const d = document.createElement("div"); d.innerHTML = html.trim(); return d.firstChild; };
 const stage = document.getElementById("stage");
-function put(html, x, y, extra = "") { const el = $(html); el.classList.add("abs"); el.style.left = x + "px"; el.style.top = y + "px"; if (extra) el.style.cssText += extra; stage.appendChild(el); return el; }
+const content = document.getElementById("content");
+function put(html, x, y, extra = "") { const el = $(html); el.classList.add("abs"); el.style.left = x + "px"; el.style.top = y + "px"; if (extra) el.style.cssText += extra; content.appendChild(el); return el; }
 /** Fade + slide + scale in. */
 function enter(el, t, start, dur = 0.6, { dy = 18, dx = 0, scale = 1, fn = easeOut } = {}) {
   const p = fn(prog(t, start, dur));
@@ -63,8 +75,11 @@ function enter(el, t, start, dur = 0.6, { dy = 18, dx = 0, scale = 1, fn = easeO
 function popIn(el, t, start, dur = 0.55) { return enter(el, t, start, dur, { dy: 0, scale: 0.6, fn: spring }); }
 function exitEl(el, t, start, dur = 0.5, dx = 0, dy = -16) { const p = easeInOut(prog(t, start, dur)); if (p > 0) { el.style.opacity = 1 - p; el.style.transform = `translate(${dx * p}px, ${dy * p}px)`; } return p; }
 
-const brand = () => { stage.appendChild($(`<div class="brand"><img src="../public/favicon.svg" alt="">Weatherise</div>`)); };
-const caption = (txt) => stage.appendChild($(`<div class="caption">${txt}</div>`));
+// macOS-style menu bar: app name + menus on the left, feature name and clock on the right.
+const brand = () => {
+  stage.appendChild($(`<div class="menubar"><img src="../public/favicon.svg" alt=""><b>Weatherise</b><span>File</span><span>Edit</span><span>View</span><span>Window</span><span>Help</span><span class="right"><span id="feature" style="color:#6e6e73"></span><span>Fri Jun 12&nbsp;&nbsp;9:41 AM</span></span></div>`));
+};
+const caption = (txt) => { document.getElementById("feature").textContent = txt; };
 
 // ── Reel 1: Ask in Plain Language ────────────────────────────────────────
 const PROMPT = "We plan to pour the deck slab at Hoa Lien Overpass on Friday morning and run the tower crane all day. Is Friday safe? If not, when is the best pour window this week, and when must the crane stop?";
@@ -78,7 +93,7 @@ reels.ask = {
     const fields = [["Domain", "Construction"], ["Site", "Hoa Lien Interchange Overpass"], ["Planned", "Fri, Jun 12 · morning"], ["Work", "Deck slab pour · Tower crane"]];
     this.fields = fields.map(([k, v], i) => put(`<div class="card" style="padding:14px 18px;width:300px;height:84px"><div class="label">${k}</div><div style="font-size:17px;font-weight:600;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v}</div></div>`, 100 + (i % 2) * 316, 380 + Math.floor(i / 2) * 100));
     const qs = ["Is Friday safe?", "Best pour window", "Crane stop hours"];
-    this.qhead = put(`<div class="label" style="font-weight:500">Your questions</div>`, 768, 382);
+    this.qhead = put(`<div class="label glass" style="font-weight:600;color:#1d1d1f">Your questions</div>`, 768, 374);
     this.qs = qs.map((q, i) => put(`<div class="card" style="padding:12px 16px;width:420px;display:flex;align-items:center;gap:12px"><span class="mono" style="font-size:13px;padding:3px 8px;border-radius:999px;background:var(--subtle);box-shadow:var(--ring)">Q${i + 1}</span><span style="font-size:18px;font-weight:600">${q}</span></div>`, 768, 408 + i * 64));
     const steps = ["Parse Request", "Resolve Place & Dates", "Load Site Profile", "Fetch Weather"];
     this.steps = steps.map((s, i) => put(`<div class="chip" style="background:#fff;box-shadow:var(--ring)"><span style="color:var(--ok)">✓</span>${s}</div>`, 100 + i * 270, 640));
@@ -117,7 +132,7 @@ reels.consensus = {
   build() {
     brand(); caption("Seven sources, one forecast");
     const src = [["Open-Meteo", 74], ["OpenWeatherMap", 78], ["WeatherAPI", 72], ["Tomorrow.io", 76], ["Visual Crossing", 73], ["Stormglass", 77], ["7Timer", 35]];
-    this.head = put(`<div style="font-size:15px;color:var(--muted)">Fri, Jun 12 · 14:00 · rain chance</div>`, 90, 96);
+    this.head = put(`<div class="glass" style="font-size:15px;font-weight:600;color:#1d1d1f">Fri, Jun 12 · 14:00 · rain chance</div>`, 90, 88);
     this.cards = src.map(([name, v], i) => {
       const x = 90 + (i % 4) * 280, y = 140 + Math.floor(i / 4) * 150;
       const el = put(`<div class="card" style="width:256px;padding:18px 20px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;font-weight:600">${name}</span><span class="q" style="font-size:13px;font-weight:600;color:var(--ok);opacity:0">✓ Valid</span></div><div class="tnum" style="font-size:40px;font-weight:700;letter-spacing:-0.03em;margin-top:8px"><span class="v">0</span>%</div></div>`, x, y);

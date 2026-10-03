@@ -9,14 +9,14 @@ export default function Closing() {
     <>
       <section className="l-section l-snow" aria-labelledby="cta-heading">
         <div className="l-container text-center">
-          <MaskHeading id="cta-heading" className="l-display mx-auto max-w-[900px]" lines={["Plan for the weather", <span key="b" className="l-gradient-text">you'll actually get.</span>]} />
+          <MaskHeading id="cta-heading" className="l-hero-title mx-auto max-w-[900px]" lines={["Plan for the weather", <span key="b" className="l-gradient-text">you'll actually get.</span>]} />
           <Reveal delay={200}>
-            <p className="l-sub mx-auto mt-6 max-w-[560px]">Ask one question. Get a plan that already knows the rules.</p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <a href="/app" className="l-btn l-btn-primary">
+            <p className="l-hero-sub mx-auto mt-4 max-w-[560px]">Ask one question. Get a plan that already knows the rules.</p>
+            <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
+              <a href="/app" className="l-btn l-btn-lg l-btn-primary">
                 Try It Out <ArrowRight size={16} aria-hidden="true" />
               </a>
-              <a href="/monitor" className="l-btn l-btn-ghost">
+              <a href="/monitor" className="l-btn l-btn-outline">
                 Open the Pipeline Monitor
               </a>
             </div>
