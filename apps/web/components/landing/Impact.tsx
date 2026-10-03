@@ -222,7 +222,25 @@ export default function Impact() {
         </Reveal>
 
         <Reveal delay={120} className="mt-10">
-          <div className="l-card overflow-x-auto">
+          <ul className="space-y-3 md:hidden">
+            {COMPARISON.rows.map((row) => (
+              <li key={row.label} className="l-card p-5">
+                <p className="text-[16px] font-semibold leading-snug text-[color:var(--l-ink)]">{row.label}</p>
+                {row.note && <p className="l-caption mt-1">{row.note}</p>}
+                <dl className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3">
+                  {COMPARISON.columns.map((c, i) => (
+                    <div key={c} className={`rounded-xl px-3 py-2 ${i === 0 ? "bg-[rgba(0,136,255,0.06)]" : "bg-[color:var(--l-snow)]"}`}>
+                      <dt className={`text-[13px] font-semibold ${i === 0 ? "text-[color:var(--l-blue)]" : "text-[color:var(--l-smoke)]"}`}>{c}</dt>
+                      <dd className="mt-1">
+                        <SupportMark value={row.cells[i]} highlight={i === 0} />
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </li>
+            ))}
+          </ul>
+          <div className="l-card overflow-x-auto max-md:hidden">
             <table className="w-full min-w-[760px] border-collapse text-left">
               <caption className="sr-only">Weatherise compared with Windy, Tomorrow.io and a general AI chatbot</caption>
               <thead>

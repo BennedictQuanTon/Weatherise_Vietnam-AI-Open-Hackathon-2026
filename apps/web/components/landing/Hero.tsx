@@ -46,11 +46,11 @@ export default function Hero() {
           </p>
         </Reveal>
         <Reveal delay={320}>
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
-            <a href="/app" className="l-btn l-btn-lg l-btn-primary">
+          <div className="mt-9 flex flex-wrap items-center justify-center gap-4 max-sm:flex-col max-sm:gap-3">
+            <a href="/app" className="l-btn l-btn-lg l-btn-primary max-sm:w-full max-sm:max-w-[320px]">
               Try It Out <ArrowRight size={18} aria-hidden="true" />
             </a>
-            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="l-btn l-btn-outline">
+            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="l-btn l-btn-outline max-sm:w-full max-sm:max-w-[320px]">
               <Github size={19} aria-hidden="true" /> View on GitHub
             </a>
           </div>
@@ -62,8 +62,8 @@ export default function Hero() {
         iPad sits behind the MacBook's left edge, iPhone in front of its right edge, slightly forward.
         Positions are % of a 1185 × 645 stage (measured from Apple-style marketing compositions).
       */}
-      <div ref={ref} className="l-container mt-14 md:mt-16">
-        <div className="relative mx-auto aspect-[1185/650] max-w-[1185px]">
+      <div ref={ref} className="l-container mt-14 max-sm:mt-6 md:mt-16">
+        <div className="relative mx-auto aspect-[1185/650] max-w-[1185px] max-md:aspect-[1185/760]">
           <Float className="bottom-[5.4%] left-0 z-0 w-[26%]" delay={260} from="translate3d(-40px,30px,0)" spread={-26} progress={p}>
             <IPadPro>
               <Screen src="/landing/devices/ipad-agri.jpg" alt="Weatherise on iPad: the Hoa Vang rice co-op plan with a skip-irrigation verdict." width={1668} height={2388} />

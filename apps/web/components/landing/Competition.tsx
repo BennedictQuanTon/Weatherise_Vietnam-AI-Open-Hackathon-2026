@@ -40,12 +40,12 @@ export function Competition() {
           {/* Track painted snow-gray so the logos' white backgrounds multiply away */}
           <ul className="l-marquee-track items-center" style={{ background: "var(--l-snow)" }}>
             {logos.map((l, i) => (
-              <li key={`${l.name}-${i}`} className="mx-12 flex h-24 shrink-0 items-center md:mx-16" aria-hidden={i >= ORGANIZERS.length}>
+              <li key={`${l.name}-${i}`} className="mx-12 flex h-24 shrink-0 items-center max-sm:mx-8 max-sm:h-16 max-sm:[&>img]:!h-[calc(var(--h)*0.72)] md:mx-16" aria-hidden={i >= ORGANIZERS.length}>
                 <img
                   src={l.src}
                   alt={l.name}
                   className="w-auto object-contain mix-blend-multiply transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:scale-110"
-                  style={{ height: l.h }}
+                  style={{ height: l.h, ["--h" as string]: `${l.h}px` }}
                 />
               </li>
             ))}

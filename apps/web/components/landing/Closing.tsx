@@ -12,11 +12,11 @@ export default function Closing() {
           <MaskHeading id="cta-heading" className="l-hero-title mx-auto max-w-[900px]" lines={["Plan for the weather", <span key="b" className="l-gradient-text">you'll actually get.</span>]} />
           <Reveal delay={200}>
             <p className="l-hero-sub mx-auto mt-4 max-w-[560px]">Ask one question. Get a plan that already knows the rules.</p>
-            <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
-              <a href="/app" className="l-btn l-btn-lg l-btn-primary">
+            <div className="mt-9 flex flex-wrap items-center justify-center gap-4 max-sm:flex-col max-sm:gap-3">
+              <a href="/app" className="l-btn l-btn-lg l-btn-primary max-sm:w-full max-sm:max-w-[320px]">
                 Try It Out <ArrowRight size={16} aria-hidden="true" />
               </a>
-              <a href="/monitor" className="l-btn l-btn-outline">
+              <a href="/monitor" className="l-btn l-btn-outline max-sm:w-full max-sm:max-w-[320px]">
                 Open the Pipeline Monitor
               </a>
             </div>

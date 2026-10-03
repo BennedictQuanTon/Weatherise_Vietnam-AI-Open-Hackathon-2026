@@ -101,7 +101,7 @@ function FeatureSlide({
 
   return (
     <article className="relative flex h-full flex-col">
-      <div className="mx-auto w-full max-w-[860px] px-[5%] pt-10 md:px-0 md:pt-14">
+      <div className="mx-auto w-full max-w-[860px] px-[5%] pt-10 max-sm:pt-16 md:px-0 md:pt-14">
         <MacBookPro>
           {failed ? (
             <img src={feature.poster} alt={feature.title} className="absolute inset-0 h-full w-full object-cover" />
@@ -130,10 +130,10 @@ function FeatureSlide({
           type="button"
           onClick={toggleSound}
           aria-label={muted ? `Turn Sound On for ${feature.title}` : `Turn Sound Off for ${feature.title}`}
-          className="l-arrow absolute right-5 top-5 !h-10 !w-auto gap-1.5 px-3.5 text-[14px] font-medium md:right-7 md:top-7"
+          className="l-arrow absolute right-5 top-5 !h-10 !w-auto gap-1.5 px-3.5 text-[14px] font-medium max-sm:right-4 max-sm:top-4 max-sm:px-3 md:right-7 md:top-7"
         >
           {muted ? <VolumeX size={16} aria-hidden="true" /> : <Volume2 size={16} aria-hidden="true" />}
-          {muted ? "Sound On" : "Sound Off"}
+          <span className="max-sm:sr-only">{muted ? "Sound On" : "Sound Off"}</span>
         </button>
       )}
     </article>
@@ -302,7 +302,7 @@ export function HowItWorks() {
           <p className="l-eyebrow">How It Works</p>
           <MaskHeading className="l-heading-lg mt-3" lines={["From question to decision,", "in one pipeline."]} />
         </div>
-        <ol className="relative mt-12 space-y-8 border-l-2 border-[color:var(--l-mist)] pl-8">
+        <ol className="relative ml-6 mt-12 space-y-8 border-l-2 border-[color:var(--l-mist)] pl-8">
           {PIPELINE.map((s, i) => {
             const Icon = STEP_ICONS[i];
             return (

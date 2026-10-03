@@ -35,10 +35,10 @@ function DeveloperCard({ name, role, photo, index }: { name: string; role: strin
           <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-[rgba(16,16,16,0.82)] via-[rgba(16,16,16,0.35)] to-transparent" aria-hidden="true" />
         </div>
         <span className="absolute left-4 top-4 rounded-full bg-white/90 px-2.5 py-1 text-[12px] font-semibold text-[color:var(--l-ink)] shadow-[0_2px_10px_rgba(16,16,16,0.12)] backdrop-blur tnum">0{index + 1}</span>
-        <div className="absolute inset-x-0 bottom-0 p-5 text-white" style={{ opacity: inView ? 1 : 0, transform: inView ? "none" : "translateY(12px)", transition: `opacity 800ms cubic-bezier(0.16,1,0.3,1) ${400 + index * 120}ms, transform 800ms cubic-bezier(0.16,1,0.3,1) ${400 + index * 120}ms` }}>
-          <p className="text-[21px] font-semibold leading-tight tracking-[-0.01em]">{name}</p>
-          <p className="mt-1 text-[14px] text-white/85">{primary}</p>
-          {secondary && <p className="text-[14px] text-white/65">{secondary}</p>}
+        <div className="absolute inset-x-0 bottom-0 p-5 text-white max-sm:p-3.5" style={{ opacity: inView ? 1 : 0, transform: inView ? "none" : "translateY(12px)", transition: `opacity 800ms cubic-bezier(0.16,1,0.3,1) ${400 + index * 120}ms, transform 800ms cubic-bezier(0.16,1,0.3,1) ${400 + index * 120}ms` }}>
+          <p className="text-[21px] font-semibold leading-tight tracking-[-0.01em] max-sm:text-[16px]">{name}</p>
+          <p className="mt-1 text-[14px] text-white/85 max-sm:text-[12px]">{primary}</p>
+          {secondary && <p className="text-[14px] text-white/65 max-sm:text-[12px]">{secondary}</p>}
         </div>
         <div className="l-sheen pointer-events-none absolute inset-0" aria-hidden="true" />
       </TiltCard>
