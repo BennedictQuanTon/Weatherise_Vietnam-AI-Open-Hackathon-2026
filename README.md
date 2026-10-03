@@ -371,10 +371,10 @@ Four builders from **HCMUT – UTS**, guided by three NVIDIA mentors.
 
 <table>
   <tr>
-    <td align="center" width="25%"><img src="apps/web/public/landing/team/long-quan-ton.jpg" width="140" alt="Long Quan Ton" /><br/><b>Long Quan Ton</b><br/><sub>Project Lead · AI Developer</sub></td>
-    <td align="center" width="25%"><img src="apps/web/public/landing/team/khanh-tuong-huynh.jpg" width="140" alt="Khanh Tuong Huynh" /><br/><b>Khanh Tuong Huynh</b><br/><sub>Technical Lead · AI Developer</sub></td>
-    <td align="center" width="25%"><img src="apps/web/public/landing/team/yoshio-nomura.jpg" width="140" alt="Yoshio Nomura" /><br/><b>Yoshio Nomura</b><br/><sub>LLMOps · AI Developer</sub></td>
-    <td align="center" width="25%"><img src="apps/web/public/landing/team/gia-thanh-le.jpg" width="140" alt="Gia Thanh Le" /><br/><b>Gia Thanh Le</b><br/><sub>UI/UX Designer</sub></td>
+    <td align="center" width="25%"><img src="docs/readme/team/long-quan-ton.jpg" width="160" height="160" alt="Long Quan Ton" /><br/><b>Long Quan Ton</b><br/><sub>Project Lead · AI Developer</sub></td>
+    <td align="center" width="25%"><img src="docs/readme/team/khanh-tuong-huynh.jpg" width="160" height="160" alt="Khanh Tuong Huynh" /><br/><b>Khanh Tuong Huynh</b><br/><sub>Technical Lead · AI Developer</sub></td>
+    <td align="center" width="25%"><img src="docs/readme/team/yoshio-nomura.jpg" width="160" height="160" alt="Yoshio Nomura" /><br/><b>Yoshio Nomura</b><br/><sub>LLMOps · AI Developer</sub></td>
+    <td align="center" width="25%"><img src="docs/readme/team/gia-thanh-le.jpg" width="160" height="160" alt="Gia Thanh Le" /><br/><b>Gia Thanh Le</b><br/><sub>UI/UX Designer</sub></td>
   </tr>
 </table>
 
