@@ -250,7 +250,7 @@ export const DEVELOPERS = [
 ];
 
 export const MENTORS = [
-  { name: "Mr. Van Le", role: "Head of AI/ML", org: "NVIDIA", photo: "/landing/team/van-le.jpg" },
-  { name: "Mr. Tran Minh Quan", role: "Senior Developer Technology Engineer", org: "NVIDIA", photo: null },
-  { name: "Mr. Yash Gupta", role: "Senior Solution Architect", org: "NVIDIA", photo: "/landing/team/yash-gupta.jpg" },
+  { name: "Mr. Yash Gupta", role: "Senior Solution Architect", org: "NVIDIA India", photo: "/landing/team/yash-gupta.jpg" },
+  { name: "Mr. Van Le", role: "Head of AI/ML", org: "NVIDIA USA", photo: "/landing/team/van-le.jpg" },
+  { name: "Mr. Tran Minh Quan", role: "Senior Developer Technology Engineer", org: "NVIDIA Vietnam", photo: "/landing/team/tran-minh-quan.jpg" },
 ];

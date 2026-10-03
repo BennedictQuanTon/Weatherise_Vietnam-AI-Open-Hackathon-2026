@@ -66,8 +66,7 @@ function MentorCard({ name, role, org, photo, index }: { name: string; role: str
         <div>
           <p className="text-[19px] font-semibold tracking-[-0.01em] text-[color:var(--l-ink)]">{name}</p>
           <p className="l-body mt-0.5 !text-[15px]">{role}</p>
-          <p className="mt-1 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#5a8f00]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#76b900]" aria-hidden="true" />
+          <p className="mt-1 text-[13px] font-semibold text-[#5a8f00]">
             {org}
           </p>
         </div>

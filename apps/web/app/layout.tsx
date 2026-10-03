@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Weatherise · Weather Decisions for Da Nang",
+    default: "Weatherise · AI Weather Decisions",
     template: "%s · Weatherise",
   },
   description:

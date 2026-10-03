@@ -223,7 +223,7 @@ export default function HomePage() {
       ? `${latestResult.report.title} · Weatherise`
       : loading
         ? "Working on It… · Weatherise"
-        : "Weatherise · Weather Decisions for Da Nang";
+        : "Weatherise · AI Weather Decisions";
   }, [latestResult, loading]);
 
   const toggleTheme = () => {

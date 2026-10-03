@@ -9,7 +9,7 @@ import Team from "@/components/landing/Team";
 import Closing from "@/components/landing/Closing";
 
 export const metadata: Metadata = {
-  title: { absolute: "Weatherise · Weather Decisions for Da Nang" },
+  title: { absolute: "Weatherise · AI Weather Decisions" },
   description:
     "Top 10 Finalist at the Vietnam AI Open Hackathon 2026. Weatherise turns forecasts from seven sources into clear go / no-go decisions for tourism, construction, and agriculture.",
 };
