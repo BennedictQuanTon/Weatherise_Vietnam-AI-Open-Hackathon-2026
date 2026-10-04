@@ -2,9 +2,10 @@
 //
 //   1. python video/trailer/voiceover.py        (Kokoro env)  → build/vo_raw.wav, build/timeline.json
 //   2. node video/trailer/capture-ui.mjs        (app on :3000) → ui/*.jpg
-//   3. node video/trailer/render.mjs [--fps 60] [--preview]
+//   3. node video/trailer/render.mjs [--fps 60] [--preview] [--subs]
 //
 // Output: public/videos/weatherise-trailer.mp4 + .srt + .jpg poster.
+// --subs burns the captions into the frames instead → public/videos/weatherise-trailer-captioned.mp4 (for muted autoplay on social).
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -21,6 +22,8 @@ const PY = process.env.PYTHON || "/opt/miniconda3/bin/python";
 const args = process.argv.slice(2);
 const FPS = Number(args[args.indexOf("--fps") + 1]) || 60;
 const PREVIEW = args.includes("--preview");
+const SUBS = args.includes("--subs");
+const NAME = SUBS ? "weatherise-trailer-captioned" : "weatherise-trailer";
 const FRAMES = join(tmpdir(), "weatherise-trailer-frames");
 
 const ff = (a) => execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...a], { stdio: "inherit" });
@@ -47,7 +50,7 @@ const t0 = Date.now();
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: "new", args: ["--allow-file-access-from-files"] });
 const page = await browser.newPage();
 await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 1 });
-await page.goto(pathToFileURL(join(HERE, "trailer.html")).href, { waitUntil: "networkidle0" });
+await page.goto(pathToFileURL(join(HERE, "trailer.html")).href + (SUBS ? "?subs=1" : ""), { waitUntil: "networkidle0" });
 await page.evaluate(() => document.fonts.ready);
 const { duration, cues } = await page.evaluate(() => ({ duration: window.TRAILER.duration, cues: window.TRAILER.cues }));
 writeFileSync(join(BUILD, "cues.json"), JSON.stringify(cues));
@@ -69,18 +72,19 @@ const srtPath = join(OUT, "weatherise-trailer.srt");
 writeFileSync(srtPath, srt);
 
 // Encode: video + mixed audio, loudness-normalized to −14 LUFS, subtitle track embedded (mov_text)
-const mp4 = join(OUT, "weatherise-trailer.mp4");
+const mp4 = join(OUT, `${NAME}.mp4`);
 ff([
   "-framerate", String(FPS), "-i", join(FRAMES, "%05d.jpg"),
   "-i", join(BUILD, "mix.wav"),
-  "-i", srtPath,
-  "-map", "0:v", "-map", "1:a", "-map", "2:s",
+  // The captioned cut already shows them in frame, so it skips the soft subtitle track.
+  ...(SUBS ? [] : ["-i", srtPath]),
+  "-map", "0:v", "-map", "1:a", ...(SUBS ? [] : ["-map", "2:s"]),
   ...h264(), "-pix_fmt", "yuv420p",
   "-af", "loudnorm=I=-14:TP=-1.0:LRA=11",
   "-c:a", "aac", "-b:a", "256k", "-ar", "48000",
-  "-c:s", "mov_text", "-metadata:s:s:0", "language=eng",
+  ...(SUBS ? [] : ["-c:s", "mov_text", "-metadata:s:s:0", "language=eng"]),
   "-t", duration.toFixed(3), "-movflags", "+faststart", mp4,
 ]);
 const poster = join(FRAMES, `${String(Math.round((tl.lines.find((l) => l.id === "r2").end + 2.2) * FPS)).padStart(5, "0")}.jpg`);
-if (existsSync(poster)) ff(["-i", poster, "-q:v", "3", join(OUT, "weatherise-trailer.jpg")]);
+if (existsSync(poster) && !SUBS) ff(["-i", poster, "-q:v", "3", join(OUT, "weatherise-trailer.jpg")]);
 console.log(`done → ${mp4} (${((Date.now() - t0) / 1000).toFixed(0)}s)`);

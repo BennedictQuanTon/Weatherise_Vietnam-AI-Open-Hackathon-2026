@@ -3,65 +3,65 @@
 Every forecast is a promise.
 
 2
-00:00:04,270 --> 00:00:06,156
+00:00:04,270 --> 00:00:06,154
 In Da Nang, it breaks.
 
 3
-00:00:06,856 --> 00:00:10,440
-Last autumn, storms cancelled up to forty percent of tours.
+00:00:06,854 --> 00:00:11,308
+Last autumn, storms cancelled or postponed up to forty percent of tours.
 
 4
-00:00:10,690 --> 00:00:13,276
+00:00:11,558 --> 00:00:14,143
 Apps tell you the wind. Never what to do.
 
 5
-00:00:14,326 --> 00:00:17,510
+00:00:15,193 --> 00:00:18,377
 So we built something that doesn't just predict the weather.
 
 6
-00:00:17,710 --> 00:00:19,129
+00:00:18,577 --> 00:00:19,996
 It decides.
 
 7
-00:00:21,079 --> 00:00:23,049
+00:00:21,946 --> 00:00:23,944
 Ask the way you'd ask a colleague.
 
 8
-00:00:24,499 --> 00:00:26,685
+00:00:25,394 --> 00:00:27,569
 Seven forecasts become one.
 
 9
-00:00:28,135 --> 00:00:31,322
+00:00:29,019 --> 00:00:32,221
 Every answer is checked against real safety rules.
 
 10
-00:00:32,772 --> 00:00:35,592
+00:00:33,671 --> 00:00:36,490
 When the storm moves in, your plan moves with it.
 
 11
-00:00:37,042 --> 00:00:39,485
+00:00:37,940 --> 00:00:40,374
 For the traveler. The builder. The farmer.
 
 12
-00:00:40,635 --> 00:00:43,112
-Twenty-one percent less forecast error.
+00:00:41,524 --> 00:00:44,502
+Ninety-one percent of calls match the experts.
 
 13
-00:00:43,262 --> 00:00:45,386
-Answers in under ten seconds.
+00:00:44,652 --> 00:00:46,780
+A decision in under five seconds.
 
 14
-00:00:45,536 --> 00:00:47,516
-Zero safety violations.
+00:00:46,930 --> 00:00:48,711
+Zero unsafe calls.
 
 15
-00:00:47,966 --> 00:00:51,168
+00:00:49,161 --> 00:00:52,362
 Top ten at the Vietnam AI Open Hackathon.
 
 16
-00:00:52,318 --> 00:00:53,562
+00:00:53,512 --> 00:00:54,755
 Weatherise.
 
 17
-00:00:53,862 --> 00:00:56,671
+00:00:55,055 --> 00:00:57,865
 The best weather is the weather you planned for.

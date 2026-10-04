@@ -103,7 +103,7 @@ export default function TrailerPlayer() {
         muted
         loop
         preload="metadata"
-        aria-label="Weatherise trailer, 59 seconds, with voiceover"
+        aria-label="Weatherise trailer, 60 seconds, with voiceover"
         onClick={togglePlay}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}

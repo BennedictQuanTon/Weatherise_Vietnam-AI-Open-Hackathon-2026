@@ -198,13 +198,14 @@ export function hourlyPoints(
 }
 
 export const PIPELINE_BASE = {
-  parse: { step: "Parse Request", agent: "Parser Agent", ms: 240 },
+  // Step timings follow the target budget on 8× H200: ~4.8 s median end to end, verdict streamed at ~2.6 s.
+  parse: { step: "Parse Request", agent: "Parser Agent · Qwen 3.5 27B", ms: 600 },
   resolve: { step: "Resolve Place & Dates", agent: "MCP · location, time", ms: 160 },
-  weather: { step: "Fetch Weather", agent: "MCP · 4 sources", ms: 420 },
-  consensus: { step: "Weather Consensus", agent: "Path B Arbiter", ms: 280 },
-  rules: { step: "Apply Domain Rules", agent: "Rule Engine · KB", ms: 90 },
-  write: { step: "Write Answer", agent: "Nemotron-3 Super 120B", ms: 540 },
+  weather: { step: "Fetch Weather", agent: "MCP · 7 sources, parallel", ms: 1200 },
+  consensus: { step: "Weather Consensus", agent: "Path B Arbiter", ms: 700 },
+  rules: { step: "Apply Domain Rules", agent: "Rule Engine · KB", ms: 50 },
+  write: { step: "Write Answer", agent: "Nemotron-3 Super 120B · streamed", ms: 1900 },
 };
 
-export const WEATHER_SOURCES = ["Open-Meteo", "OpenWeatherMap", "WeatherAPI", "Tomorrow.io"];
+export const WEATHER_SOURCES = ["Open-Meteo", "OpenWeatherMap", "WeatherAPI", "Tomorrow.io", "Visual Crossing", "7Timer", "Stormglass"];
 export const MODEL = "Nemotron-3 Super 120B · NVIDIA NIM";

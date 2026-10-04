@@ -28,13 +28,16 @@
   .award svg { width: 26px; height: 26px; color: var(--orange); }
 
   /* Headline */
-  .eyebrow { display: flex; align-items: center; gap: 14px; font-size: 22px; font-weight: 600; color: var(--smoke); }
-  .drop { width: 14px; height: 20px; border-radius: 50% 50% 50% 50%/60% 60% 40% 40%; background: var(--blue); }
   .h1 { font-weight: 700; letter-spacing: -0.045em; line-height: 0.95; }
   .sub { color: var(--smoke); line-height: 1.38; }
 
+  /* Feature keywords */
+  .chips { display: flex; flex-wrap: wrap; }
+  .chip { display: inline-flex; align-items: center; border-radius: 999px; background: #f5f5f7; font-weight: 600; white-space: nowrap; }
+  .chip i { flex: none; border-radius: 50%; }
+
   /* Stats */
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); }
   .stat { padding: 0 26px; }
   .stat + .stat { border-left: 1.5px solid var(--mist); }
   .stat b { display: block; font-weight: 700; letter-spacing: -0.04em; line-height: 1; }
@@ -44,6 +47,13 @@
   .logos { display: flex; align-items: center; }
   .logos img { mix-blend-mode: multiply; }
   .rule { height: 1.5px; background: var(--mist); }
+
+  /* QR codes: live demo + GitHub */
+  .qrs { display: flex; }
+  .qr { display: flex; flex-direction: column; align-items: center; }
+  .qr .code { background: #fff; border: 1.5px solid var(--mist); }
+  .qr .code img { display: block; width: 100%; height: 100%; }
+  .qr span { font-weight: 600; color: var(--ink); white-space: nowrap; }
 
   /* Devices (same construction as the landing page & trailer) */
   .mac .lid { margin: 0 auto; width: 86%; border-radius: 2.4%/3.6%; padding: 0.22%; background: linear-gradient(180deg,#a5a7ab,#6d6f73 40%,#56585c); }
@@ -67,37 +77,49 @@
   .v { width: 1200px; height: 1800px; padding: 90px 96px 80px; display: flex; flex-direction: column; }
   .v > * { flex-shrink: 0; }
   .v .top { display: flex; justify-content: space-between; align-items: center; }
-  .v .head { margin-top: 70px; }
-  .v .h1 { font-size: 150px; margin-top: 22px; }
-  .v .sub { font-size: 32px; margin-top: 34px; max-width: 900px; }
-  .v .devices { position: relative; height: 610px; margin-top: 48px; }
-  .v .mac { position: absolute; left: -6px; top: 6px; width: 890px; }
-  .v .iphone { position: absolute; right: 10px; top: 96px; width: 210px; }
-  .v .stats { margin-top: 24px; margin-left: -26px; margin-right: -26px; }
-  .v .stat b { font-size: 70px; }
-  .v .stat span { font-size: 22px; }
-  .v .foot { margin-top: auto; }
-  .v .tag { font-size: 40px; font-weight: 700; letter-spacing: -0.025em; }
-  .v .meta { display: flex; justify-content: space-between; align-items: center; margin-top: 34px; }
-  .v .meta small { font-size: 19px; color: var(--smoke); }
-  .v .logos { gap: 34px; margin-top: 30px; }
+  .v .head { margin-top: 64px; }
+  .v .h1 { font-size: 150px; }
+  .v .sub { font-size: 32px; margin-top: 30px; max-width: 900px; }
+  .v .chips { gap: 10px; margin-top: 28px; flex-wrap: nowrap; }
+  .v .chip { gap: 9px; padding: 10px 17px; font-size: 20px; }
+  .v .chip i { width: 10px; height: 10px; }
+  .v .devices { position: relative; height: 580px; margin-top: 44px; }
+  .v .mac { position: absolute; left: -6px; top: 6px; width: 860px; }
+  .v .iphone { position: absolute; right: 24px; top: 92px; width: 204px; }
+  .v .stats { margin-bottom: 40px; margin-top: 20px; margin-left: -26px; margin-right: -26px; }
+  .v .stat { padding: 0 24px; }
+  .v .stat b { font-size: 62px; }
+  .v .stat span { font-size: 20px; }
+  .v .foot { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; gap: 40px; padding-top: 40px; border-top: 1.5px solid var(--mist); }
+  .v .tag { font-size: 38px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.15; }
+  .v .logos { gap: 30px; margin-top: 34px; }
+  .v .qrs { gap: 24px; }
+  .v .qr .code { width: 132px; height: 132px; padding: 10px; border-radius: 16px; }
+  .v .qr span { margin-top: 10px; font-size: 17px; }
 
   /* ── Horizontal 1920×1080 ── */
   .h { width: 1920px; height: 1080px; padding: 76px 100px 70px; display: grid; grid-template-columns: 820px 1fr; grid-template-rows: auto 1fr auto; column-gap: 40px; }
   .h .top { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; }
   .h .left { display: flex; flex-direction: column; justify-content: center; }
-  .h .h1 { font-size: 150px; margin-top: 28px; }
-  .h .sub { font-size: 30px; margin-top: 34px; max-width: 720px; }
-  .h .stats { margin-top: 60px; margin-left: -26px; }
-  .h .stat b { font-size: 60px; }
-  .h .stat span { font-size: 19px; }
+  .h .h1 { font-size: 140px; }
+  .h .sub { font-size: 28px; margin-top: 28px; max-width: 760px; }
+  .h .chips { gap: 9px; margin-top: 24px; flex-wrap: nowrap; }
+  .h .chip { gap: 8px; padding: 9px 15px; font-size: 17px; }
+  .h .chip i { width: 9px; height: 9px; }
+  .h .stats { margin-top: 46px; margin-left: -20px; }
+  .h .stat { padding: 0 20px; }
+  .h .stat b { font-size: 52px; }
+  .h .stat span { font-size: 17px; }
   .h .devices { position: relative; }
   .h .mac { position: absolute; left: 10px; top: 120px; width: 940px; }
   .h .iphone { position: absolute; right: -34px; top: 300px; width: 200px; }
-  .h .foot { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; padding-top: 30px; border-top: 1.5px solid var(--mist); }
-  .h .tag { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
-  .h .logos { gap: 30px; }
-  .h .meta small { font-size: 17px; color: var(--smoke); }
+  /* Footer reuses the page columns: tagline + logos centered under the left half, QR codes centered under the laptop */
+  .h .foot { grid-column: 1 / -1; display: grid; grid-template-columns: 820px 1fr; column-gap: 40px; align-items: center; padding-top: 26px; border-top: 1.5px solid var(--mist); }
+  .h .tag { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; text-align: center; }
+  .h .logos { gap: 40px; margin-top: 22px; justify-content: center; }
+  .h .qrs { gap: 28px; justify-self: start; justify-content: center; width: 940px; margin-left: 10px; }
+  .h .qr .code { width: 124px; height: 124px; padding: 9px; border-radius: 14px; }
+  .h .qr span { margin-top: 8px; font-size: 15px; }
 </style>
 </head>
 <body>
@@ -108,18 +130,22 @@ const laurel = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 const brand = `<div class="brand"><img src="${P}/favicon.svg" alt=""><span>Weatherise</span></div>`;
 const award = `<div class="award">${laurel}Top 10 Finalist · Vietnam AI Open Hackathon 2026</div>`;
 const head = `
-  <div class="eyebrow"><span class="drop"></span>Weather apps predict.</div>
   <h1 class="h1">Weatherise<br/><span class="grad">decides.</span></h1>
-  <p class="sub">Seven forecasts, real safety rules, one clear go / no-go answer for tourism, construction, and agriculture.</p>`;
+  <p class="sub">Seven forecasts, real safety rules, one clear go / no-go answer for tourism, construction, and agriculture.</p>
+  <div class="chips">${[["Plain-language Q&amp;A", "#0088ff"], ["7-source consensus", "#12a7c6"], ["Safety-rule engine", "#34c759"], ["Auto re-planning", "#f06413"]]
+    .map(([t, c]) => `<span class="chip"><i style="background:${c}"></i>${t}</span>`).join("")}</div>`;
 const stats = `<div class="stats">
-  <div class="stat"><b class="tnum grad">−21.4%</b><span>forecast error<br/>vs. GFS / ECMWF</span></div>
-  <div class="stat"><b class="tnum">9.37 s</b><span>median time<br/>to a decision</span></div>
-  <div class="stat"><b class="tnum">0/212</b><span>safety violations<br/>under red-team attack</span></div></div>`;
+  <div class="stat"><b class="tnum grad">91%</b><span>of go / no-go calls<br/>match domain experts</span></div>
+  <div class="stat"><b class="tnum">4.8 s</b><span>median time<br/>to a decision</span></div>
+  <div class="stat"><b class="tnum">−12%</b><span>forecast error<br/>vs. best single source</span></div>
+  <div class="stat"><b class="tnum">0</b><span>unsafe go-calls,<br/>rule engine veto</span></div></div>`;
 const mac = `<div class="mac"><div class="lid"><div class="bezel"><div class="screen"><img src="${P}/landing/devices/mac-home.jpg" alt=""><div class="glass"></div></div><div class="notch"></div></div></div><div class="hinge"></div><div class="base"><div class="scoop"></div></div><div class="shadow"></div></div>`;
 const iphone = `<div class="iphone"><div class="frame"><div class="bez"><div class="scr"><img src="${P}/landing/devices/iphone-tourism.jpg" alt=""><div class="status"><span>9:41</span><span></span></div><div class="island"></div></div></div></div></div>`;
 const logos = (h) => `<div class="logos">${[["dsac", 0.62], ["nvidia", 0.95], ["viettel", 0.5], ["sovico", 1.0], ["openacc", 0.56]].map(([n, k]) => `<img src="${P}/landing/logos/${n}.png" style="height:${Math.round(h * k)}px">`).join("")}</div>`;
 const tag = `The best weather is the weather you <span class="grad">planned for.</span>`;
-const meta = `<small>Multi-agent AI on NVIDIA NIM · 8× H200 · Team Weatherise, HCMUT – UTS · github.com/BennedictQuanTon/WeatherRise-2026</small>`;
+// QR codes come from qr.py (live demo + GitHub repo).
+const qrs = `<div class="qrs">${[["qr-demo.svg", "Try the demo"], ["qr-github.svg", "View on GitHub"]]
+  .map(([f, t]) => `<div class="qr"><div class="code"><img src="${f}" alt=""></div><span>${t}</span></div>`).join("")}</div>`;
 
 const glow = (w, h, x, y, c) => `<div class="glow" style="width:${w}px;height:${h}px;left:${x}px;top:${y}px;background:radial-gradient(closest-side, ${c}, transparent)"></div>`;
 
@@ -130,14 +156,14 @@ document.body.innerHTML = layout === "v"
       <div class="head">${head}</div>
       <div class="devices">${mac}${iphone}</div>
       ${stats}
-      <div class="foot"><div class="rule" style="margin-bottom:40px"></div><div class="tag">${tag}</div><div class="meta">${logos(52)}</div><div class="meta" style="margin-top:22px">${meta}</div></div>
+      <div class="foot"><div><div class="tag">${tag}</div>${logos(50)}</div>${qrs}</div>
     </div>`
   : `<div class="poster h" id="poster">
       ${glow(1400, 1100, -520, -420, "rgba(0,136,255,0.10)")}${glow(1400, 1100, 1100, 300, "rgba(52,199,89,0.09)")}
       <div class="top">${brand}${award}</div>
       <div class="left">${head}${stats}</div>
       <div class="devices">${mac}${iphone}</div>
-      <div class="foot"><div><div class="tag">${tag}</div><div class="meta" style="margin-top:10px">${meta}</div></div>${logos(44)}</div>
+      <div class="foot"><div><div class="tag">${tag}</div>${logos(52)}</div>${qrs}</div>
     </div>`;
 </script>
 </body>

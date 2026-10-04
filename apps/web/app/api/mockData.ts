@@ -317,11 +317,11 @@ export function getTourismMockResponse(): ChatResult {
       pipeline: [
         PIPELINE_BASE.parse,
         PIPELINE_BASE.resolve,
-        { step: "Find Places & Food", agent: "MCP · places, restaurants", ms: 310 },
+        { step: "Find Places & Food", agent: "MCP · places, restaurants", ms: 260 },
         PIPELINE_BASE.weather,
         PIPELINE_BASE.consensus,
         PIPELINE_BASE.rules,
-        { step: "Order Stops", agent: "cuOpt Route Solver", ms: 120 },
+        { step: "Order Stops", agent: "cuOpt Route Solver", ms: 90 },
         PIPELINE_BASE.write,
       ],
     },
