@@ -62,9 +62,9 @@ const NB = " ";
 const ms = (v: number) => `${v.toLocaleString("en-US")}${NB}ms`;
 const sleep = (t: number) => new Promise((r) => setTimeout(r, t));
 
-// Single steps are slow above 1 s; a whole run is slow above 5 s.
+// Single steps are slow above 2.5 s; a whole run is slow above 9 s (the p95 target).
 function durationTone(v: number, total = false): Tone {
-  const [slow, critical] = total ? [5000, 10000] : [1000, 5000];
+  const [slow, critical] = total ? [9000, 15000] : [2500, 5000];
   return v > critical ? "alert" : v > slow ? "caution" : "neutral";
 }
 

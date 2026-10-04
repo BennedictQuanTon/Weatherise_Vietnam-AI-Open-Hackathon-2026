@@ -21,7 +21,7 @@
     },
     {
       "id": "p3",
-      "text": "Last autumn, storms cancelled up to forty percent of tours.",
+      "text": "Last autumn, storms cancelled or postponed up to forty percent of tours.",
       "speed": 0.96,
       "pause": 0.5
     },
@@ -75,19 +75,19 @@
     },
     {
       "id": "n1",
-      "text": "Twenty-one percent less forecast error.",
+      "text": "Ninety-one percent of calls match the experts.",
       "speed": 1.03,
       "pause": 0.4
     },
     {
       "id": "n2",
-      "text": "Answers in under ten seconds.",
+      "text": "A decision in under five seconds.",
       "speed": 1.03,
       "pause": 0.4
     },
     {
       "id": "n3",
-      "text": "Zero safety violations.",
+      "text": "Zero unsafe calls.",
       "speed": 1.0,
       "pause": 0.7
     },

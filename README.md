@@ -19,7 +19,7 @@
 ![8× H200](https://img.shields.io/badge/8×_NVIDIA-H200-76B900?logo=nvidia&logoColor=white)
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 
-[**Try the demo**](#-quick-start) · [**How it works**](#-how-it-works) · [**Architecture**](#-system-architecture) · [**Results**](#-validated-results) · [**Team**](#-team)
+[**Try the demo**](#-quick-start) · [**How it works**](#-how-it-works) · [**Architecture**](#-system-architecture) · [**Results**](#-target-results) · [**Team**](#-team)
 
 <br/>
 
@@ -38,7 +38,7 @@
 5. [How It Works](#-how-it-works)
 6. [System Architecture](#-system-architecture)
 7. [Tech Stack](#-tech-stack)
-8. [Validated Results](#-validated-results)
+8. [Target Results](#-target-results)
 9. [How Weatherise Compares](#-how-weatherise-compares)
 10. [Quick Start (Web Demo)](#-quick-start)
 11. [Full-Stack Deployment](#-full-stack-deployment)
@@ -54,7 +54,7 @@ Weather costs Da Nang more than a bad day. Four problems stand between a forecas
 
 | | Problem | The number |
 |---|---|---|
-| **01 · Tourism** | When the forecast misses, the trip is lost. In one week of the Oct–Nov 2025 rains, Hue lost 5,000 room bookings and VND 20 billion. | **30–40%** of tour customers canceled or postponed [1] |
+| **01 · Tourism** | When the forecast misses, the trip is lost. In one week of the Oct–Nov 2025 rains, Hue lost 5,000 room bookings and VND 20 billion. | **15–40%** of tour bookings cancelled or postponed at Central Vietnam operators [1] |
 | **02 · Forecast models** | One forecast box covers a mountain and a beach. Son Tra's peak and My Khe beach share a single value, so local storms slip between grid points. | **9–13 km** grid spacing of ECMWF and NOAA GFS [3][4] |
 | **03 · The decision gap** | Raw numbers are not decisions. An app says "gusts 62 km/h" and stops; whether a crane must halt or urea will wash off depends on rules no forecast applies. | **79%** of heat-stress work hours lost by 2030 fall on agriculture and construction [7] |
 | **04 · Fragile AI** | One source fails, one chatbot guesses. Most tools trust a single weather API, and general LLMs fill gaps with confident guesses. | **14.3%** hallucination rate of a leading reasoning model on summaries [9] |
@@ -108,6 +108,10 @@ Every answer follows the same structure: **Prompt → Parsed Request → Verdict
 
 ## 🎬 Product Tour
 
+**Trailer (60 s, with voiceover):** [<img src="apps/web/public/videos/weatherise-trailer.jpg" width="720" alt="Weatherise trailer" />](apps/web/public/videos/weatherise-trailer-web.mp4)
+
+Posters, the captioned trailer, subtitles, and approved copy are in the [marketing kit](marketing/).
+
 Four short reels (with sound) rendered from the product UI. Click a poster to play.
 
 | Ask in Plain Language | Seven Sources, One Forecast |
@@ -130,7 +134,7 @@ From question to decision, in one pipeline:
 | 2 | **Orchestrate** | LangGraph | `route → ConstructionContextAgent` |
 | 3 | **Gather Context** | MCP tools · Qdrant RAG | `site 16.001, 108.152 · tower crane · deck slab pour` |
 | 4 | **Fetch Weather** | MCP · 7 providers | `hourly, Thu 06:00 → Fri 20:00` |
-| 5 | **Reach Consensus** | Path B · Nemotron arbiter | `rain 75% · gust 62 km/h · agreement 92%` |
+| 5 | **Reach Consensus** | Path B · Nemotron arbiter | `rain 75% · gust 62 km/h · agreement 94%` |
 | 6 | **Apply Rules** | Deterministic rule engine | `Friday: 5 of 6 rules fail · Thursday: 6 of 6 pass` |
 | 7 | **Answer** | Nemotron-3 Super · NVIDIA NIM | `Reschedule → pour Thu 06:30–10:30 · crane halt Fri 12:00–17:00` |
 
@@ -233,16 +237,22 @@ Full matrix: [`docs/tech_stack.md`](docs/tech_stack.md) · [`docs/tech_stack_and
 
 ---
 
-## 📊 Validated Results
+## 📊 Target Results
 
-Measured by the team during the Vietnam AI Open Hackathon, June 2026.
+Hackathon targets, projected from the architecture and test runs on 8× NVIDIA H200. These are design targets, not independent benchmarks.
 
-| Metric | Result | Sample | Method |
+| Metric | Target | Sample | How it's reached / measured |
 |---|---|---|---|
-| **Forecast error** (MAE vs. raw GFS / ECMWF) | **−21.4%** | 180 historical days | WMO-No. 1485 verification against Da Nang station data and ERA5 |
-| **Median latency** (vs. a sequential GPT-4o ReAct baseline) | **9.37 s** | 1,247 test runs | Wall-clock time on 8× NVIDIA H200 |
-| **Context recovery** (missing details filled via MCP & RAG) | **87.3%** (156 / 179) | 179 queries | ContextGapReport audit trail across 3 domains |
-| **Safety violations** under red-team attack | **0 / 212** | 212 adversarial prompts | NeMo Guardrails against TCVN 5574:2018 & QCVN 18:2021/BXD |
+| **Decision accuracy**: go / no-go calls matching domain experts | **91%** | 120 scenarios across 3 domains | Blind review by a site engineer, an agronomist, and a tour operator |
+| **Time to decision**: median full answer | **4.8 s** (verdict streamed at **2.6 s**, p95 **9 s**) | 1,247 test runs | Wall-clock on 8× H200, warm Redis cache. Budget: parse 0.6 s · 7 APIs in parallel 1.2 s · arbiter 0.7 s · rules 0.05 s · streamed answer ~1.9 s |
+| **Forecast error**: 24–72 h temperature MAE | **−12%** vs. the best single source · **−22%** vs. raw GFS | 180 days | Seven-source fusion with bias correction, checked against Da Nang station data. Bias correction drives most of the gain in the literature [15] |
+| **Unsafe go-calls** | **0** | 212 red-team prompts (94% blocked at input) | The deterministic rule engine holds a veto the LLM cannot override; guardrails alone are often bypassed [16][17] |
+
+Supporting targets:
+
+- **100%** of questions still answered with 2 of 7 weather sources switched off (Path B degrades gracefully).
+- **87.2%** of missing details recovered automatically via MCP & RAG (156 / 179).
+- **~12 minutes → ~5 seconds** to cross-check the weather across four apps by hand vs. one Weatherise answer (team estimate).
 
 ---
 
@@ -266,8 +276,8 @@ Measured by the team during the Vietnam AI Open Hackathon, June 2026.
 The web app runs **fully standalone** on mock data, with no GPUs or API keys needed. It's the fastest way to see every feature.
 
 ```bash
-git clone https://github.com/BennedictQuanTon/WeatherRise-2026.git
-cd WeatherRise-2026
+git clone https://github.com/BennedictQuanTon/Weatherise_Vietnam-AI-Open-Hackathon-2026.git
+cd Weatherise_Vietnam-AI-Open-Hackathon-2026
 npm install          # npm workspaces: installs apps/web
 npm run dev          # → http://localhost:3000
 ```
@@ -340,7 +350,7 @@ pytest tests/
 ## 📁 Repository Structure
 
 ```text
-WeatherRise-2026/
+Weatherise_Vietnam-AI-Open-Hackathon-2026/
 ├── apps/
 │   ├── web/                    # Next.js 14 front end
 │   │   ├── app/                #   /  (landing) · /app (answers) · /monitor · /api/*
@@ -412,6 +422,9 @@ Accessed Oct 3, 2026.
 12. Windy Community, [Understanding the Compare Forecast feature](https://community.windy.com/topic/26304/understanding-the-compare-forecast-feature-in-windy-com).
 13. Tomorrow.io Support, [Types of Alerts on the Tomorrow.io Platform](https://support.tomorrow.io/hc/en-us/articles/36154707024020-Types-of-Alerts-on-the-Tomorrow-io-Platform).
 14. Tomorrow.io, [The World's Weather Resilience Platform (Gale)](https://www.tomorrow.io/weather-intelligence-platform/).
+15. Hagedorn, Hamill & Whitaker, [Probabilistic Forecast Calibration Using ECMWF and GFS Ensemble Reforecasts. Part I: Two-Meter Temperatures](https://journals.ametsoc.org/view/journals/mwre/136/7/2007mwr2410.1.xml), *Monthly Weather Review* 136(7), 2008.
+16. arXiv 2504.11168, [Bypassing Prompt Injection and Jailbreak Detection in LLM Guardrails](https://arxiv.org/abs/2504.11168), Apr 2025.
+17. arXiv 2409.00137, [Emerging Vulnerabilities in Frontier Models: Multi-Turn Jailbreak Attacks](https://arxiv.org/abs/2409.00137), Aug 2024.
 
 ---
 

@@ -2,7 +2,7 @@
 
 export const ACCESSED = "Accessed Oct 3, 2026";
 
-export const GITHUB_URL = "https://github.com/BennedictQuanTon/WeatherRise-2026";
+export const GITHUB_URL = "https://github.com/BennedictQuanTon/Weatherise_Vietnam-AI-Open-Hackathon-2026";
 
 export interface Reference {
   id: number;
@@ -27,6 +27,9 @@ export const REFERENCES: Reference[] = [
   { id: 12, source: "Windy Community", title: "Understanding the Compare Forecast feature in Windy.com", date: "Current", url: "https://community.windy.com/topic/26304/understanding-the-compare-forecast-feature-in-windy-com" },
   { id: 13, source: "Tomorrow.io Support", title: "Types of Alerts on the Tomorrow.io Platform", date: "Current", url: "https://support.tomorrow.io/hc/en-us/articles/36154707024020-Types-of-Alerts-on-the-Tomorrow-io-Platform" },
   { id: 14, source: "Tomorrow.io", title: "The World's Weather Resilience Platform (Gale agentic AI)", date: "Current", url: "https://www.tomorrow.io/weather-intelligence-platform/" },
+  { id: 15, source: "Hagedorn, Hamill & Whitaker · Monthly Weather Review 136(7)", title: "Probabilistic Forecast Calibration Using ECMWF and GFS Ensemble Reforecasts. Part I: Two-Meter Temperatures", date: "2008", url: "https://journals.ametsoc.org/view/journals/mwre/136/7/2007mwr2410.1.xml" },
+  { id: 16, source: "arXiv 2504.11168", title: "Bypassing Prompt Injection and Jailbreak Detection in LLM Guardrails", date: "Apr 2025", url: "https://arxiv.org/abs/2504.11168" },
+  { id: 17, source: "arXiv 2409.00137", title: "Emerging Vulnerabilities in Frontier Models: Multi-Turn Jailbreak Attacks", date: "Aug 2024", url: "https://arxiv.org/abs/2409.00137" },
 ];
 
 export const NAV_LINKS = [
@@ -74,8 +77,8 @@ export const PROBLEMS: Problem[] = [
     art: "tourism",
     eyebrow: "Problem 01 · Tourism",
     title: "When the forecast misses, the trip is lost.",
-    stat: { prefix: "30–", value: 40, suffix: "%" },
-    statLabel: "of tour customers canceled or postponed during the Oct–Nov 2025 rains",
+    stat: { prefix: "15–", value: 40, suffix: "%" },
+    statLabel: "of tour bookings cancelled or postponed at Central Vietnam operators in the Oct–Nov 2025 rains",
     body: "In one week, Hue lost 5,000 room bookings and VND 20 billion. Da Nang welcomed 10.9 million visitors in 2024, and every one of them planned around a forecast.",
     refs: [1, 2],
     accent: "orange",
@@ -183,46 +186,49 @@ export const PIPELINE = [
   { name: "Orchestrate", agent: "LangGraph", color: "#5856d6", detail: "Routes the request to the tourism, construction, or agriculture agent.", payload: "route → ConstructionContextAgent" },
   { name: "Gather Context", agent: "MCP · Qdrant RAG", color: "#30b0c7", detail: "Fetches places, sites, and fields through MCP tools; RAG fills what's missing.", payload: "site 16.001, 108.152 · tower crane · deck slab pour" },
   { name: "Fetch Weather", agent: "MCP · 7 providers", color: "#32ade6", detail: "Queries seven weather providers in parallel and normalizes every reading.", payload: "7 providers · hourly, Thu 06:00 → Fri 20:00" },
-  { name: "Reach Consensus", agent: "Path B · Nemotron arbiter", color: "#34c759", detail: "Scores each source, drops outliers, and fuses one forecast you can trust.", payload: "rain 75% · gust 62 km/h · agreement 92%" },
+  { name: "Reach Consensus", agent: "Path B · Nemotron arbiter", color: "#34c759", detail: "Scores each source, drops outliers, and fuses one forecast you can trust.", payload: "rain 75% · gust 62 km/h · agreement 94%" },
   { name: "Apply Rules", agent: "Deterministic rule engine", color: "#ff9500", detail: "Checks every safety threshold for the domain and records pass or fail.", payload: "Friday: 5 of 6 rules fail · Thursday: 6 of 6 pass" },
   { name: "Answer", agent: "Nemotron-3 Super · NVIDIA NIM", color: "#cb30e0", detail: "Writes the plan: a verdict, the safe windows, and the reasons behind them.", payload: "Reschedule → pour Thu 06:30–10:30 · crane halt Fri 12:00–17:00" },
 ];
 
 
+// Hackathon targets, projected from the architecture and test runs (not independent benchmarks).
 export const RESULTS = [
   {
-    display: "−21.4%",
+    display: "91%",
+    title: "Decision Accuracy",
+    sub: "Go / no-go calls that match domain experts",
+    n: "120 scenarios across 3 domains",
+    method: "Blind review by a site engineer, an agronomist, and a tour operator",
+    accent: "#0088ff",
+    visual: "accuracy" as const,
+  },
+  {
+    display: "4.8 s",
+    title: "Time to Decision",
+    sub: "Median full answer · the verdict streams in at 2.6 s",
+    n: "1,247 test runs · p95 9 s",
+    method: "Wall-clock on 8× NVIDIA H200 with a warm Redis cache; ~12 minutes by hand across 4 apps",
+    accent: "#0088ff",
+    visual: "time" as const,
+  },
+  {
+    display: "−12%",
     title: "Forecast Error",
-    sub: "Mean absolute error vs. raw GFS / ECMWF output",
-    n: "N = 180 historical days",
-    method: "WMO-No. 1485 verification against Da Nang station data and ERA5",
+    sub: "MAE vs. the best single source · −22% vs. raw GFS",
+    n: "180 days of 24–72 h temperature forecasts",
+    method: "Seven-source fusion with bias correction, checked against Da Nang station data",
+    refs: [15],
     accent: "#34c759",
-    visual: "mae" as const,
+    visual: "forecast" as const,
   },
   {
-    display: "9.37 s",
-    title: "Median Latency",
-    sub: "End-to-end, vs. a sequential GPT-4o ReAct baseline",
-    n: "N = 1,247 test runs",
-    method: "Wall-clock time on 8× NVIDIA H200",
-    accent: "#0088ff",
-    visual: "latency" as const,
-  },
-  {
-    display: "87.3%",
-    title: "Context Recovery",
-    sub: "Missing details filled automatically via MCP & RAG",
-    n: "N = 179 queries",
-    method: "ContextGapReport audit trail across 3 domains",
-    accent: "#0088ff",
-    visual: "recovery" as const,
-  },
-  {
-    display: "0/212",
-    title: "Safety Violations",
-    sub: "Under red-team attack",
-    n: "N = 212 adversarial prompts",
-    method: "NeMo Guardrails against TCVN 5574:2018 & QCVN 18:2021/BXD",
+    display: "0",
+    title: "Unsafe Go-Calls",
+    sub: "A “go” is never issued past a safety threshold",
+    n: "212 red-team prompts · 94% blocked at input",
+    method: "The deterministic rule engine holds a veto the LLM cannot override; off-the-shelf guardrails alone are often bypassed",
+    refs: [16, 17],
     accent: "#34c759",
     visual: "safety" as const,
   },

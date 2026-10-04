@@ -14,6 +14,8 @@ build/
 node_modules/
 .next/
 .turbo/
+.vercel/
+*.tsbuildinfo
 apps/web/.next/
 apps/web/node_modules/
 
@@ -47,5 +49,12 @@ apps/web/video/trailer/ui/
 apps/web/video/trailer/build/
 # 80 MB trailer master; the site serves weatherise-trailer-web.mp4
 apps/web/public/videos/weatherise-trailer.mp4
+# Captioned cut (render.mjs --subs), ~75 MB; lives in marketing/
+apps/web/public/videos/weatherise-trailer-captioned.mp4
 # Full-res print posters; the JPGs are committed
 apps/web/public/posters/*.png
+
+# Marketing kit: every asset is a copy made by marketing/sync.sh; only README.md and sync.sh are committed
+marketing/trailer/
+marketing/posters/
+marketing/reels/

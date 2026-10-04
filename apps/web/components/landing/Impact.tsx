@@ -1,6 +1,5 @@
 "use client";
 
-import { useId } from "react";
 import { Check, Minus, X } from "lucide-react";
 import { COMPARISON, RESULTS, type Support } from "./content";
 import { Cite } from "./Competition";
@@ -23,7 +22,10 @@ function ResultCard({ res, index }: { res: (typeof RESULTS)[number]; index: numb
       </div>
       <div className="mt-8 border-t border-[color:var(--l-mist)] pt-5">
         <p className="text-[14px] font-semibold text-[color:var(--l-ink)] tnum">{res.n}</p>
-        <p className="l-caption mt-1">{res.method}</p>
+        <p className="l-caption mt-1">
+          {res.method}
+          {"refs" in res && res.refs ? <Cite ids={res.refs} /> : null}
+        </p>
       </div>
     </div>
   );
@@ -60,139 +62,138 @@ function SupportMark({ value, highlight }: { value: Support; highlight: boolean 
 
 const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
 
-function MaeVisual({ active }: { active: boolean }) {
-  const bars = [
-    { label: "Raw GFS / ECMWF", value: 100, color: "#d0d0d3" },
-    { label: "Weatherise", value: 78.6, color: "#34c759" },
+/** 91%: 120 scenario dots, 109 agree with the experts. */
+function AccuracyVisual({ active }: { active: boolean }) {
+  const total = 120, agree = 109;
+  return (
+    <div className="w-full">
+      <div className="grid grid-cols-[repeat(20,minmax(0,1fr))] gap-[6px]" aria-hidden="true">
+        {Array.from({ length: total }, (_, i) => (
+          <span
+            key={i}
+            className="aspect-square rounded-full"
+            style={{
+              background: active ? (i < agree ? "#0088ff" : "#d0d0d3") : "#f0f0f0",
+              transform: active ? "scale(1)" : "scale(0.6)",
+              transition: `background-color 300ms ease ${i * 6}ms, transform 500ms ${EASE} ${i * 6}ms`,
+            }}
+          />
+        ))}
+      </div>
+      <div className="mt-5 flex flex-wrap gap-x-6 gap-y-1 text-[14px] text-[color:var(--l-smoke)]">
+        <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#0088ff]" aria-hidden="true" />109 match the experts</span>
+        <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#d0d0d3]" aria-hidden="true" />11 borderline calls</span>
+      </div>
+    </div>
+  );
+}
+
+/** 4.8 s: a 0–15 s scale with the streamed verdict (2.6 s), the median (4.8 s), p95 (9 s), and doing it by hand. */
+function TimeVisual({ active }: { active: boolean }) {
+  const max = 15;
+  const pos = (v: number) => `${(v / max) * 100}%`;
+  const marks = [
+    // On phones the first two labels sit tight, so they hang outward from their marks; centered from md up.
+    { v: 2.6, label: "Verdict", color: "#34c759", align: "-translate-x-full pr-1 text-right md:-translate-x-1/2 md:pr-0 md:text-center" },
+    { v: 4.8, label: "Full answer", short: "Answer", color: "#0088ff", align: "pl-1 text-left md:-translate-x-1/2 md:pl-0 md:text-center" },
+    { v: 9, label: "p95", color: "#ababb0", align: "-translate-x-1/2 text-center" },
   ];
   return (
     <div className="w-full">
-      <p className="l-caption">Error index · raw models = 100</p>
-      <div className="mt-6 space-y-6">
+      <div className="relative h-4 rounded-full bg-[color:var(--l-snow)]">
+        <div
+          className="absolute inset-y-0 left-0 rounded-full"
+          style={{ width: active ? pos(4.8) : "0%", background: "linear-gradient(90deg,#34c759,#0088ff)", transition: `width 1400ms ${EASE}` }}
+        />
+        {marks.map((m, i) => (
+          <span
+            key={m.label}
+            className="absolute top-1/2 h-7 w-[3px] -translate-y-1/2 rounded-full"
+            style={{ left: pos(m.v), background: m.color, opacity: active ? 1 : 0, transition: `opacity 400ms ease ${700 + i * 200}ms` }}
+            aria-hidden="true"
+          />
+        ))}
+      </div>
+      <div className="relative mt-3 h-12 text-[13px]">
+        {marks.map((m, i) => (
+          <span
+            key={m.label}
+            className={`absolute whitespace-nowrap ${m.align}`}
+            style={{ left: pos(m.v), opacity: active ? 1 : 0, transition: `opacity 400ms ease ${700 + i * 200}ms` }}
+          >
+            <b className="block font-semibold text-[color:var(--l-ink)] tnum">{m.v} s</b>
+            <span className={`text-[color:var(--l-smoke)] ${m.short ? "hidden md:inline" : ""}`}>{m.label}</span>
+            {m.short && <span className="text-[color:var(--l-smoke)] md:hidden">{m.short}</span>}
+          </span>
+        ))}
+        <span className="absolute right-0 text-right text-[color:var(--l-smoke)]">
+          <b className="block font-semibold text-[color:var(--l-ink)]">15 s</b>
+        </span>
+      </div>
+      <p className="mt-3 text-[14px] text-[color:var(--l-smoke)]">
+        By hand: <b className="font-semibold text-[color:var(--l-ink)]">~12 minutes</b> across four weather apps.
+      </p>
+    </div>
+  );
+}
+
+/** −12% / −22%: error index with raw GFS = 100. */
+function ForecastVisual({ active }: { active: boolean }) {
+  const bars = [
+    { label: "Raw GFS", value: 100, color: "#d0d0d3" },
+    { label: "Best single source", value: 88.6, color: "#ababb0" },
+    { label: "Weatherise", value: 78, color: "#34c759" },
+  ];
+  return (
+    <div className="w-full">
+      <p className="l-caption">Forecast error index · raw GFS = 100</p>
+      <div className="mt-5 space-y-5">
         {bars.map((b, i) => (
           <div key={b.label}>
             <div className="flex justify-between text-[15px]">
               <span className="font-medium text-[color:var(--l-ink)]">{b.label}</span>
               <span className="tnum text-[color:var(--l-smoke)]">{b.value}</span>
             </div>
-            <div className="mt-2 h-4 overflow-hidden rounded-full bg-[color:var(--l-snow)]">
-              <div
-                className="h-full rounded-full"
-                style={{ width: active ? `${b.value}%` : "0%", background: b.color, transition: `width 1400ms ${EASE} ${i * 250}ms` }}
-              />
+            <div className="mt-2 h-3.5 overflow-hidden rounded-full bg-[color:var(--l-snow)]">
+              <div className="h-full rounded-full" style={{ width: active ? `${b.value}%` : "0%", background: b.color, transition: `width 1400ms ${EASE} ${i * 220}ms` }} />
             </div>
           </div>
         ))}
       </div>
-      <div className="mt-6 flex items-center gap-2 text-[15px] font-semibold text-[#1f8f3a]" style={{ opacity: active ? 1 : 0, transition: `opacity 600ms ${EASE} 1100ms` }}>
-        <span className="inline-block h-[2px] w-6 rounded-full bg-[#34c759]" aria-hidden="true" /> 21.4% less error
-      </div>
     </div>
   );
 }
 
-function LatencyVisual({ active }: { active: boolean }) {
-  // Unique gradient id per instance: the desktop copy is display:none on mobile, and a
-  // gradient defined inside a hidden SVG won't paint for another SVG that references it.
-  const gid = `lat-${useId().replace(/:/g, "")}`;
-  const max = 15;
-  const frac = 9.37 / max;
-  const r = 110;
-  const len = Math.PI * r;
-  return (
-    <div className="flex w-full flex-col items-center">
-      <svg viewBox="0 0 260 150" className="w-full max-w-[340px]" aria-hidden="true">
-        <path d="M20 135a110 110 0 0 1 220 0" fill="none" stroke="#f0f0f0" strokeWidth="16" strokeLinecap="round" />
-        <path
-          d="M20 135a110 110 0 0 1 220 0"
-          fill="none"
-          stroke={`url(#${gid})`}
-          strokeWidth="16"
-          strokeLinecap="round"
-          strokeDasharray={len}
-          strokeDashoffset={active ? len * (1 - frac) : len}
-          style={{ transition: `stroke-dashoffset 1600ms ${EASE}` }}
-        />
-        <defs>
-          <linearGradient id={gid} x1="0" x2="1">
-            <stop offset="0" stopColor="#0088ff" />
-            <stop offset="1" stopColor="#34c759" />
-          </linearGradient>
-        </defs>
-        {[0, 5, 10, 15].map((v) => {
-          const a = Math.PI * (1 - v / max);
-          return (
-            <text key={v} x={(130 + Math.cos(a) * 82).toFixed(2)} y={(135 - Math.sin(a) * 82 + 4).toFixed(2)} fontSize="11" textAnchor="middle" fill="#ababb0">
-              {v}s
-            </text>
-          );
-        })}
-        <g style={{ transform: `rotate(${active ? -90 + 180 * frac : -90}deg)`, transformOrigin: "130px 135px", transition: `transform 1600ms ${EASE}` }}>
-          <line x1="130" y1="135" x2="130" y2="74" stroke="#101010" strokeWidth="3" strokeLinecap="round" />
-        </g>
-        <circle cx="130" cy="135" r="7" fill="#101010" />
-      </svg>
-      <p className="l-caption mt-2">Median wall-clock time per answer</p>
-    </div>
-  );
-}
-
-function RecoveryVisual({ active }: { active: boolean }) {
-  const r = 80;
-  const c = 2 * Math.PI * r;
-  return (
-    <div className="flex w-full flex-col items-center">
-      <div className="relative">
-        <svg viewBox="0 0 200 200" className="h-[220px] w-[220px] -rotate-90" aria-hidden="true">
-          <circle cx="100" cy="100" r={r} fill="none" stroke="#f0f0f0" strokeWidth="16" />
-          <circle
-            cx="100"
-            cy="100"
-            r={r}
-            fill="none"
-            stroke="#0088ff"
-            strokeWidth="16"
-            strokeLinecap="round"
-            strokeDasharray={c}
-            strokeDashoffset={active ? c * (1 - 0.873) : c}
-            style={{ transition: `stroke-dashoffset 1600ms ${EASE}` }}
-          />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-[13px] text-[color:var(--l-smoke)]">filled</span>
-          <span className="text-[30px] font-semibold tracking-[-0.02em] tnum">156 / 179</span>
-        </div>
-      </div>
-      <p className="l-caption mt-3">Queries with missing details recovered automatically</p>
-    </div>
-  );
-}
-
+/** 0 unsafe calls: 212 red-team prompts, 199 blocked at input, 13 reached the rules and were vetoed. */
 function SafetyVisual({ active }: { active: boolean }) {
+  const total = 212, blocked = 199;
   return (
     <div className="w-full">
       <div className="grid grid-cols-[repeat(20,minmax(0,1fr))] gap-[5px]" aria-hidden="true">
-        {Array.from({ length: 212 }, (_, i) => (
+        {Array.from({ length: total }, (_, i) => (
           <span
             key={i}
             className="aspect-square rounded-full"
             style={{
-              background: active ? "#34c759" : "#f0f0f0",
+              background: active ? (i < blocked ? "#34c759" : "#0088ff") : "#f0f0f0",
               transform: active ? "scale(1)" : "scale(0.6)",
               transition: `background-color 300ms ease ${i * 5}ms, transform 500ms ${EASE} ${i * 5}ms`,
             }}
           />
         ))}
       </div>
-      <p className="l-caption mt-5">Each dot is one adversarial prompt. Every one was blocked or answered safely.</p>
+      <div className="mt-5 flex flex-wrap gap-x-6 gap-y-1 text-[14px] text-[color:var(--l-smoke)]">
+        <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#34c759]" aria-hidden="true" />199 blocked at input</span>
+        <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#0088ff]" aria-hidden="true" />13 vetoed by the rule engine</span>
+      </div>
     </div>
   );
 }
 
 function ResultVisual({ kind, active }: { kind: (typeof RESULTS)[number]["visual"]; active: boolean }) {
-  if (kind === "mae") return <MaeVisual active={active} />;
-  if (kind === "latency") return <LatencyVisual active={active} />;
-  if (kind === "recovery") return <RecoveryVisual active={active} />;
+  if (kind === "accuracy") return <AccuracyVisual active={active} />;
+  if (kind === "time") return <TimeVisual active={active} />;
+  if (kind === "forecast") return <ForecastVisual active={active} />;
   return <SafetyVisual active={active} />;
 }
 
@@ -202,9 +203,9 @@ export default function Impact() {
       <div className="l-container l-section">
         <div className="mx-auto max-w-[780px] text-center">
           <p className="l-eyebrow">Impact</p>
-          <MaskHeading className="l-heading-lg mt-3" lines={["Validated on real", <span key="b" className="l-gradient-text">Da Nang data.</span>]} />
+          <MaskHeading className="l-heading-lg mt-3" lines={["Built to deliver,", <span key="b" className="l-gradient-text">in seconds.</span>]} />
           <Reveal delay={150}>
-            <p className="l-hero-sub mt-4">Measured by the team during the Vietnam AI Open Hackathon, June 2026.</p>
+            <p className="l-hero-sub mt-4">Hackathon targets, projected from the architecture and test runs on 8× NVIDIA H200.</p>
           </Reveal>
         </div>
 

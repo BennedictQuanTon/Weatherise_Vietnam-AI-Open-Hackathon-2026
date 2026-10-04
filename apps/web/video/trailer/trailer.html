@@ -134,12 +134,12 @@ const p2 = el(`<div class="layer center"><div class="title" style="font-size:118
 p2.ws = [...p2.querySelectorAll(".title > .w")];
 const bkTop = p2.querySelector(".bk.top"), bkBot = p2.querySelector(".bk.bot");
 
-// Act 1b: 30–40% + cancelled trip cards
+// Act 1b: 15–40% + cancelled trip cards
 const statWrap = el(`<div class="layer"></div>`);
 const trips = [["Day 1 · 08:00", "Son Tra Peninsula"], ["Day 2 · 14:00", "Marble Mountains"], ["Day 3 · 09:00", "Hoi An Old Town"]].map(([a, b], i) =>
   el(`<div class="card" style="left:${190 + i * 34}px;top:${300 + i * 150}px;width:620px;height:126px;padding:26px 34px"><div style="font-size:24px;font-weight:600;color:var(--smoke)">${a}</div><div style="font-size:36px;font-weight:700;margin-top:6px">${b}</div><div class="stamp" style="right:30px;top:38px">CANCELLED</div></div>`, statWrap));
 const stamps = trips.map((c) => c.querySelector(".stamp"));
-const odoBox = el(`<div style="position:absolute;left:1000px;top:330px;width:820px"><div class="title tnum" id="odo" style="font-size:210px;color:var(--orange);letter-spacing:-0.04em;display:flex;align-items:baseline"></div><div class="label" style="margin-top:18px;font-size:34px">of tour customers cancelled or postponed</div><div class="sub" style="font-size:26px;margin-top:6px">Central Vietnam, Oct–Nov 2025 · VnExpress</div></div>`, statWrap);
+const odoBox = el(`<div style="position:absolute;left:1000px;top:330px;width:820px"><div class="title tnum" id="odo" style="font-size:210px;color:var(--orange);letter-spacing:-0.04em;display:flex;align-items:baseline"></div><div class="label" style="margin-top:18px;font-size:34px">of tour bookings cancelled or postponed</div><div class="sub" style="font-size:26px;margin-top:6px">Central Vietnam tour operators, Oct–Nov 2025 · VnExpress</div></div>`, statWrap);
 const odo = odoBox.querySelector("#odo");
 /** Rolling digits: each digit spins through a column to its target. */
 function odometer(host, text, p, stagger = 0.08) {
@@ -221,9 +221,9 @@ const roles = [["The traveler.", 1500, "traveler"], ["The builder.", 960, "build
 
 // ─── Act 4: proof ──────────────────────────────────────────────────────────
 const PROOF = [
-  { id: "n1", big: "−21.4%", label: "forecast error", sub: "vs. raw GFS / ECMWF · 180 days" },
-  { id: "n2", big: "9.37 s", label: "median time to a decision", sub: "1,247 runs on 8× NVIDIA H200" },
-  { id: "n3", big: "0 / 212", label: "safety violations", sub: "under red-team attack" },
+  { id: "n1", big: "91%", label: "of go / no-go calls match domain experts", sub: "120 scenarios · tourism, construction & agriculture" },
+  { id: "n2", big: "4.8 s", label: "to a full decision", sub: "verdict streams in 2.6 s · 8× NVIDIA H200" },
+  { id: "n3", big: "0", label: "unsafe go-calls", sub: "the rule engine holds a veto · 212 red-team prompts" },
   { id: "n4", big: "Top 10", label: "Vietnam AI Open Hackathon 2026", sub: "NVIDIA · Viettel · Sovico" },
 ];
 const proofs = PROOF.map((p) => {
@@ -236,7 +236,7 @@ proofs.forEach((n) => { n.odo.classList.remove("grad"); n.odo.style.color = "var
 // ─── Act 5: end card ───────────────────────────────────────────────────────
 const endBrand = el(`<div class="layer center"><div style="display:flex;align-items:center;gap:30px"><img src="../../public/favicon.svg" style="width:130px;height:130px" id="eLogo"/><span class="title" id="eWm" style="font-size:132px;letter-spacing:-0.04em">Weatherise</span></div></div>`);
 const eLogo = endBrand.querySelector("#eLogo"), eWm = endBrand.querySelector("#eWm");
-const tagline = el(`<div class="layer center" style="padding-top:330px"><div class="title" style="font-size:58px;letter-spacing:-0.02em"><span class="w">The</span> <span class="w">best</span> <span class="w">weather</span> <span class="w">is</span> <span class="w">the</span> <span class="w">weather</span> <span class="w">you</span> <span class="w grad">planned</span> <span class="w grad">for.</span></div><div class="sub" id="eFoot" style="font-size:26px;margin-top:38px">github.com/BennedictQuanTon/WeatherRise-2026 · Team Weatherise · HCMUT–UTS</div></div>`);
+const tagline = el(`<div class="layer center" style="padding-top:330px"><div class="title" style="font-size:58px;letter-spacing:-0.02em"><span class="w">The</span> <span class="w">best</span> <span class="w">weather</span> <span class="w">is</span> <span class="w">the</span> <span class="w">weather</span> <span class="w">you</span> <span class="w grad">planned</span> <span class="w grad">for.</span></div><div class="sub" id="eFoot" style="font-size:26px;margin-top:38px">github.com/BennedictQuanTon/Weatherise_Vietnam-AI-Open-Hackathon-2026 · Team Weatherise · HCMUT–UTS</div></div>`);
 tagline.ws = [...tagline.querySelectorAll(".w")];
 const eFoot = tagline.querySelector("#eFoot");
 
@@ -313,7 +313,7 @@ function render(t) {
   bkTop.style.color = bkBot.style.color = bk > 0.05 ? "var(--orange)" : "var(--ink)";
   drawRain(t, clamp(prog(t, S.p2, breakT + 0.4) * 0.6 + bk * 0.6) * (1 - prog(t, S.r1 - 0.8, S.r1 + 0.2)));
 
-  // 30–40%
+  // 15–40%
   const sw = win(t, S.p3 - 0.2, S.p4 - 0.1, 0.5, 0.45);
   statWrap.style.opacity = sw;
   trips.forEach((c, i) => {
@@ -322,7 +322,7 @@ function render(t) {
     const sp = eExpo(prog(t, S.p3 + 0.9 + i * 0.32, S.p3 + 1.15 + i * 0.32));
     set(stamps[i], { o: sp, s: lerp(2.4, 1, sp), r: -8 });
   });
-  odometer(odo, "30–40%", prog(t, S.p3 + 0.35, S.p3 + 2.1));
+  odometer(odo, "15–40%", prog(t, S.p3 + 0.35, S.p3 + 2.1));
   set(odoBox, { o: eOut(prog(t, S.p3 + 0.2, S.p3 + 0.8)), x: (1 - eExpo(prog(t, S.p3 + 0.2, S.p3 + 1))) * 60 });
 
   // Raw numbers, no decisions
