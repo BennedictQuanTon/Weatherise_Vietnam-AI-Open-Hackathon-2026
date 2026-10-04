@@ -620,3 +620,13 @@ html.dark .report {
 .l-arrow:disabled { opacity: 0.35; cursor: default; }
 .l-arrow:focus-visible, .l-dot:focus-visible { outline: 2px solid var(--l-blue); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .l-slider-track { transition: none; } }
+
+/* Trailer captions */
+.landing video::cue {
+  background: rgba(16, 16, 16, 0.72);
+  color: #fff;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: clamp(14px, 1.6vw, 22px);
+  font-weight: 500;
+  line-height: 1.35;
+}

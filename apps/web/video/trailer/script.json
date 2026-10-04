@@ -1,0 +1,113 @@
+{
+  "voice": {
+    "blend": {
+      "am_onyx": 0.6,
+      "am_michael": 0.4
+    }
+  },
+  "start": 1.6,
+  "lines": [
+    {
+      "id": "p1",
+      "text": "Every forecast is a promise.",
+      "speed": 0.88,
+      "pause": 0.55
+    },
+    {
+      "id": "p2",
+      "text": "In Da Nang, it breaks.",
+      "speed": 0.84,
+      "pause": 0.95
+    },
+    {
+      "id": "p3",
+      "text": "Last autumn, storms cancelled up to forty percent of tours.",
+      "speed": 0.96,
+      "pause": 0.5
+    },
+    {
+      "id": "p4",
+      "text": "Apps tell you the wind. Never what to do.",
+      "speed": 0.95,
+      "pause": 1.3
+    },
+    {
+      "id": "r1",
+      "text": "So we built something that doesn't just predict the weather.",
+      "speed": 0.93,
+      "pause": 0.45
+    },
+    {
+      "id": "r2",
+      "text": "It decides.",
+      "speed": 0.8,
+      "pause": 2.2
+    },
+    {
+      "id": "f1",
+      "text": "Ask the way you'd ask a colleague.",
+      "speed": 1.0,
+      "pause": 1.7
+    },
+    {
+      "id": "f2",
+      "text": "Seven forecasts become one.",
+      "speed": 1.0,
+      "pause": 1.7
+    },
+    {
+      "id": "f3",
+      "text": "Every answer is checked against real safety rules.",
+      "speed": 1.0,
+      "pause": 1.7
+    },
+    {
+      "id": "f4",
+      "text": "When the storm moves in, your plan moves with it.",
+      "speed": 1.0,
+      "pause": 1.7
+    },
+    {
+      "id": "f5",
+      "text": "For the traveler. The builder. The farmer.",
+      "speed": 0.94,
+      "pause": 1.4
+    },
+    {
+      "id": "n1",
+      "text": "Twenty-one percent less forecast error.",
+      "speed": 1.03,
+      "pause": 0.4
+    },
+    {
+      "id": "n2",
+      "text": "Answers in under ten seconds.",
+      "speed": 1.03,
+      "pause": 0.4
+    },
+    {
+      "id": "n3",
+      "text": "Zero safety violations.",
+      "speed": 1.0,
+      "pause": 0.7
+    },
+    {
+      "id": "n4",
+      "text": "Top ten at the Vietnam A.I. Open Hackathon.",
+      "speed": 0.95,
+      "pause": 1.4
+    },
+    {
+      "id": "e1",
+      "text": "Weatherise.",
+      "speed": 0.82,
+      "pause": 0.55
+    },
+    {
+      "id": "e2",
+      "text": "The best weather is the weather you planned for.",
+      "speed": 0.9,
+      "pause": 2.4
+    }
+  ]
+}

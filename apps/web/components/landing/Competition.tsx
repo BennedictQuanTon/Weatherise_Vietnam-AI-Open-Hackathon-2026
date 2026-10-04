@@ -3,6 +3,7 @@
 import { COMPETITION_FACTS, ORGANIZERS } from "./content";
 import { CountUp, MaskHeading, Odometer, Reveal } from "./motion";
 import { Laurel } from "./Hero";
+import TrailerPlayer from "./TrailerPlayer";
 
 function Cite({ ids }: { ids: number[] }) {
   return (
@@ -98,16 +99,7 @@ export function Award() {
           </p>
         </Reveal>
         <Reveal scale delay={150} className="mt-14 md:mt-16">
-          <div className="overflow-hidden rounded-[32px] md:rounded-[40px]">
-            <img
-              src="/landing/team/team-event.jpg"
-              alt="Team Weatherise with NVIDIA mentor Yash Gupta at the Vietnam AI Open Hackathon in Da Nang."
-              className="aspect-[16/8] w-full object-cover object-[50%_35%]"
-              width={1613}
-              height={1210}
-              loading="lazy"
-            />
-          </div>
+          <TrailerPlayer />
         </Reveal>
       </div>
     </section>

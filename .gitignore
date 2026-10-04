@@ -39,3 +39,13 @@ optimizer_fix_guidelines.md
 verify_optimizer.py
 simulate_prompts.py
 simulated_prompts_output.txt
+
+# Video & poster generation (regenerate with the scripts in apps/web/video/)
+# App screenshots captured for the trailer (capture-ui.mjs)
+apps/web/video/trailer/ui/
+# Voiceover, timeline, cues, audio stems & mix
+apps/web/video/trailer/build/
+# 80 MB trailer master; the site serves weatherise-trailer-web.mp4
+apps/web/public/videos/weatherise-trailer.mp4
+# Full-res print posters; the JPGs are committed
+apps/web/public/posters/*.png
