@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Weatherise — Poster</title>
+<style>
+  /* Two layouts from one source: ?layout=v (1200×1800, 2:3 print) · ?layout=h (1920×1080, 16:9). Rendered at 2–3×. */
+  :root {
+    --ink: #101010; --smoke: #6e6e73; --pewter: #ababb0; --mist: #f0f0f0; --silver: #d0d0d3;
+    --blue: #0088ff; --green: #34c759; --orange: #f06413;
+    --brand: linear-gradient(90deg, #0088ff 0%, #12a7c6 55%, #34c759 100%);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #fff; }
+  body { font-family: system-ui, -apple-system, "SF Pro Display", sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
+  .poster { position: relative; overflow: hidden; background: #fff; }
+  .grad { background: var(--brand); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .glow { position: absolute; border-radius: 50%; pointer-events: none; }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  /* Brand */
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand img { width: 44px; height: 44px; }
+  .brand span { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+
+  /* Award pill */
+  .award { display: inline-flex; align-items: center; gap: 12px; padding: 12px 22px; border-radius: 999px; background: #f5f5f7; font-size: 20px; font-weight: 600; white-space: nowrap; }
+  .award svg { width: 26px; height: 26px; color: var(--orange); }
+
+  /* Headline */
+  .eyebrow { display: flex; align-items: center; gap: 14px; font-size: 22px; font-weight: 600; color: var(--smoke); }
+  .drop { width: 14px; height: 20px; border-radius: 50% 50% 50% 50%/60% 60% 40% 40%; background: var(--blue); }
+  .h1 { font-weight: 700; letter-spacing: -0.045em; line-height: 0.95; }
+  .sub { color: var(--smoke); line-height: 1.38; }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .stat { padding: 0 26px; }
+  .stat + .stat { border-left: 1.5px solid var(--mist); }
+  .stat b { display: block; font-weight: 700; letter-spacing: -0.04em; line-height: 1; }
+  .stat span { display: block; margin-top: 10px; color: var(--smoke); line-height: 1.3; }
+
+  /* Footer */
+  .logos { display: flex; align-items: center; }
+  .logos img { mix-blend-mode: multiply; }
+  .rule { height: 1.5px; background: var(--mist); }
+
+  /* Devices (same construction as the landing page & trailer) */
+  .mac .lid { margin: 0 auto; width: 86%; border-radius: 2.4%/3.6%; padding: 0.22%; background: linear-gradient(180deg,#a5a7ab,#6d6f73 40%,#56585c); }
+  .mac .bezel { position: relative; border-radius: 2.2%/3.4%; background: #060607; padding: 1.55% 1.55% 2.2%; }
+  .mac .screen { position: relative; overflow: hidden; border-radius: 1.1%/1.7% 1.1%/1.7% 0.4%/0.6% 0.4%/0.6%; background: #fff; aspect-ratio: 3024/1964; }
+  .mac .screen img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+  .mac .notch { position: absolute; left: 50%; top: 0; height: 4.1%; width: 11.5%; transform: translateX(-50%); border-radius: 0 0 14%/36% 14%/36%; background: #060607; z-index: 2; }
+  .mac .glass { position: absolute; inset: 0; background: linear-gradient(115deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.04) 30%, transparent 31%); z-index: 1; }
+  .mac .hinge { margin: 0 auto; height: 0.45%; min-height: 4px; width: 80%; background: linear-gradient(180deg,#3a3b3e,#141415); }
+  .mac .base { position: relative; height: 14px; border-radius: 0 0 2.2%/90% 2.2%/90%; background: linear-gradient(180deg,#f4f5f6 0%,#dadbdd 18%,#c3c5c8 55%,#9c9ea2 82%,#77797d 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.9); }
+  .mac .scoop { position: absolute; left: 50%; top: 0; height: 52%; width: 15%; transform: translateX(-50%); border-radius: 0 0 18%/100% 18%/100%; background: linear-gradient(180deg,#9fa1a5,#c6c8cb 70%,#d9dadc); }
+  .mac .shadow { margin: 6px auto 0; height: 22px; width: 92%; border-radius: 50%; background: radial-gradient(closest-side, rgba(16,16,16,0.2), transparent); }
+  .iphone .frame { border-radius: 17%/8%; padding: 1.5%; background: linear-gradient(135deg,#e3e3e5,#9fa0a4 22%,#d8d8db 48%,#8e8f93 74%,#c9c9cc); box-shadow: 0 30px 60px rgba(16,16,16,0.22); }
+  .iphone .bez { border-radius: 15.6%/7.3%; background: #050506; padding: 3.2%; }
+  .iphone .scr { position: relative; overflow: hidden; border-radius: 13%/6%; aspect-ratio: 1179/2556; background: #fff; }
+  .iphone .scr img { position: absolute; left: 0; top: 5.6%; width: 100%; height: 94.4%; object-fit: cover; object-position: top; }
+  .iphone .island { position: absolute; left: 50%; top: 1.6%; height: 3.9%; width: 31%; transform: translateX(-50%); border-radius: 99px; background: #000; }
+  .iphone .status { position: absolute; left: 9%; right: 9%; top: 1.7%; display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; }
+
+  /* ── Vertical 1200×1800 ── */
+  .v { width: 1200px; height: 1800px; padding: 90px 96px 80px; display: flex; flex-direction: column; }
+  .v > * { flex-shrink: 0; }
+  .v .top { display: flex; justify-content: space-between; align-items: center; }
+  .v .head { margin-top: 70px; }
+  .v .h1 { font-size: 150px; margin-top: 22px; }
+  .v .sub { font-size: 32px; margin-top: 34px; max-width: 900px; }
+  .v .devices { position: relative; height: 610px; margin-top: 48px; }
+  .v .mac { position: absolute; left: -6px; top: 6px; width: 890px; }
+  .v .iphone { position: absolute; right: 10px; top: 96px; width: 210px; }
+  .v .stats { margin-top: 24px; margin-left: -26px; margin-right: -26px; }
+  .v .stat b { font-size: 70px; }
+  .v .stat span { font-size: 22px; }
+  .v .foot { margin-top: auto; }
+  .v .tag { font-size: 40px; font-weight: 700; letter-spacing: -0.025em; }
+  .v .meta { display: flex; justify-content: space-between; align-items: center; margin-top: 34px; }
+  .v .meta small { font-size: 19px; color: var(--smoke); }
+  .v .logos { gap: 34px; margin-top: 30px; }
+
+  /* ── Horizontal 1920×1080 ── */
+  .h { width: 1920px; height: 1080px; padding: 76px 100px 70px; display: grid; grid-template-columns: 820px 1fr; grid-template-rows: auto 1fr auto; column-gap: 40px; }
+  .h .top { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; }
+  .h .left { display: flex; flex-direction: column; justify-content: center; }
+  .h .h1 { font-size: 150px; margin-top: 28px; }
+  .h .sub { font-size: 30px; margin-top: 34px; max-width: 720px; }
+  .h .stats { margin-top: 60px; margin-left: -26px; }
+  .h .stat b { font-size: 60px; }
+  .h .stat span { font-size: 19px; }
+  .h .devices { position: relative; }
+  .h .mac { position: absolute; left: 10px; top: 120px; width: 940px; }
+  .h .iphone { position: absolute; right: -34px; top: 300px; width: 200px; }
+  .h .foot { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; padding-top: 30px; border-top: 1.5px solid var(--mist); }
+  .h .tag { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+  .h .logos { gap: 30px; }
+  .h .meta small { font-size: 17px; color: var(--smoke); }
+</style>
+</head>
+<body>
+<script>
+const layout = new URLSearchParams(location.search).get("layout") || "v";
+const P = "../../public";
+const laurel = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20c-2.5-2-4-5-4-8.5C3 8 4.4 5.2 6.5 3.5"/><path d="M17 20c2.5-2 4-5 4-8.5 0-3.5-1.4-6.3-3.5-8"/><path d="M4.2 9.5c1.6.2 2.6 1.2 2.8 2.8-1.6-.1-2.6-1.1-2.8-2.8zM4.5 14.5c1.5-.5 2.8 0 3.5 1.4-1.5.5-2.8 0-3.5-1.4zM5.6 5.8c1.3.6 1.9 1.8 1.6 3.3-1.3-.6-1.9-1.8-1.6-3.3z"/><path d="M19.8 9.5c-1.6.2-2.6 1.2-2.8 2.8 1.6-.1 2.6-1.1 2.8-2.8zM19.5 14.5c-1.5-.5-2.8 0-3.5 1.4 1.5.5 2.8 0 3.5-1.4zM18.4 5.8c-1.3.6-1.9 1.8-1.6 3.3 1.3-.6 1.9-1.8 1.6-3.3z"/><path d="M9 21h6"/></svg>`;
+const brand = `<div class="brand"><img src="${P}/favicon.svg" alt=""><span>Weatherise</span></div>`;
+const award = `<div class="award">${laurel}Top 10 Finalist · Vietnam AI Open Hackathon 2026</div>`;
+const head = `
+  <div class="eyebrow"><span class="drop"></span>Weather apps predict.</div>
+  <h1 class="h1">Weatherise<br/><span class="grad">decides.</span></h1>
+  <p class="sub">Seven forecasts, real safety rules, one clear go / no-go answer for tourism, construction, and agriculture.</p>`;
+const stats = `<div class="stats">
+  <div class="stat"><b class="tnum grad">−21.4%</b><span>forecast error<br/>vs. GFS / ECMWF</span></div>
+  <div class="stat"><b class="tnum">9.37 s</b><span>median time<br/>to a decision</span></div>
+  <div class="stat"><b class="tnum">0/212</b><span>safety violations<br/>under red-team attack</span></div></div>`;
+const mac = `<div class="mac"><div class="lid"><div class="bezel"><div class="screen"><img src="${P}/landing/devices/mac-home.jpg" alt=""><div class="glass"></div></div><div class="notch"></div></div></div><div class="hinge"></div><div class="base"><div class="scoop"></div></div><div class="shadow"></div></div>`;
+const iphone = `<div class="iphone"><div class="frame"><div class="bez"><div class="scr"><img src="${P}/landing/devices/iphone-tourism.jpg" alt=""><div class="status"><span>9:41</span><span></span></div><div class="island"></div></div></div></div></div>`;
+const logos = (h) => `<div class="logos">${[["dsac", 0.62], ["nvidia", 0.95], ["viettel", 0.5], ["sovico", 1.0], ["openacc", 0.56]].map(([n, k]) => `<img src="${P}/landing/logos/${n}.png" style="height:${Math.round(h * k)}px">`).join("")}</div>`;
+const tag = `The best weather is the weather you <span class="grad">planned for.</span>`;
+const meta = `<small>Multi-agent AI on NVIDIA NIM · 8× H200 · Team Weatherise, HCMUT – UTS · github.com/BennedictQuanTon/WeatherRise-2026</small>`;
+
+const glow = (w, h, x, y, c) => `<div class="glow" style="width:${w}px;height:${h}px;left:${x}px;top:${y}px;background:radial-gradient(closest-side, ${c}, transparent)"></div>`;
+
+document.body.innerHTML = layout === "v"
+  ? `<div class="poster v" id="poster">
+      ${glow(1300, 1100, -420, -360, "rgba(0,136,255,0.10)")}${glow(1300, 1100, 380, 900, "rgba(52,199,89,0.09)")}
+      <div class="top">${brand}${award}</div>
+      <div class="head">${head}</div>
+      <div class="devices">${mac}${iphone}</div>
+      ${stats}
+      <div class="foot"><div class="rule" style="margin-bottom:40px"></div><div class="tag">${tag}</div><div class="meta">${logos(52)}</div><div class="meta" style="margin-top:22px">${meta}</div></div>
+    </div>`
+  : `<div class="poster h" id="poster">
+      ${glow(1400, 1100, -520, -420, "rgba(0,136,255,0.10)")}${glow(1400, 1100, 1100, 300, "rgba(52,199,89,0.09)")}
+      <div class="top">${brand}${award}</div>
+      <div class="left">${head}${stats}</div>
+      <div class="devices">${mac}${iphone}</div>
+      <div class="foot"><div><div class="tag">${tag}</div><div class="meta" style="margin-top:10px">${meta}</div></div>${logos(44)}</div>
+    </div>`;
+</script>
+</body>
+</html>

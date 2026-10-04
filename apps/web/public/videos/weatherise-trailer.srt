@@ -1,0 +1,67 @@
+1
+00:00:01,600 --> 00:00:03,970
+Every forecast is a promise.
+
+2
+00:00:04,270 --> 00:00:06,156
+In Da Nang, it breaks.
+
+3
+00:00:06,856 --> 00:00:10,440
+Last autumn, storms cancelled up to forty percent of tours.
+
+4
+00:00:10,690 --> 00:00:13,276
+Apps tell you the wind. Never what to do.
+
+5
+00:00:14,326 --> 00:00:17,510
+So we built something that doesn't just predict the weather.
+
+6
+00:00:17,710 --> 00:00:19,129
+It decides.
+
+7
+00:00:21,079 --> 00:00:23,049
+Ask the way you'd ask a colleague.
+
+8
+00:00:24,499 --> 00:00:26,685
+Seven forecasts become one.
+
+9
+00:00:28,135 --> 00:00:31,322
+Every answer is checked against real safety rules.
+
+10
+00:00:32,772 --> 00:00:35,592
+When the storm moves in, your plan moves with it.
+
+11
+00:00:37,042 --> 00:00:39,485
+For the traveler. The builder. The farmer.
+
+12
+00:00:40,635 --> 00:00:43,112
+Twenty-one percent less forecast error.
+
+13
+00:00:43,262 --> 00:00:45,386
+Answers in under ten seconds.
+
+14
+00:00:45,536 --> 00:00:47,516
+Zero safety violations.
+
+15
+00:00:47,966 --> 00:00:51,168
+Top ten at the Vietnam AI Open Hackathon.
+
+16
+00:00:52,318 --> 00:00:53,562
+Weatherise.
+
+17
+00:00:53,862 --> 00:00:56,671
+The best weather is the weather you planned for.
