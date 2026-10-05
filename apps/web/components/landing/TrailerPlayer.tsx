@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Captions, CaptionsOff, Play, Volume2, VolumeX } from "lucide-react";
 import { useInlineVideo, useVideoSrc } from "./useInlineVideo";
+import { VideoDebug, useVideoLog } from "./VideoDebug";
 
 const SRC = "/videos/weatherise-trailer-web.mp4";
 // 720p cut for phones: lighter on mobile data, same picture.
@@ -21,12 +22,36 @@ export default function TrailerPlayer() {
   const userPaused = useRef(false);
   // Muted with the speaker button: a later Play / tap resumes without forcing sound back on.
   const userMuted = useRef(false);
-  const src = useVideoSrc(SRC, SRC_MOBILE);
+  const chosen = useVideoSrc(SRC, SRC_MOBILE);
+  // After a load error the player may switch files (mobile → desktop cut); null = use the chosen one.
+  const [override, setOverride] = useState<string | null>(null);
+  const src = override ?? chosen;
   const { playing } = useInlineVideo(video, true, { userPaused, soundFirst: true });
   const [muted, setMuted] = useState(true);
   const [captions, setCaptions] = useState(false);
-  // No playable file at all: show the poster instead of an empty box.
+  // Every recovery step failed: show the poster with a Play button that retries in place (never leaves the page).
   const [failed, setFailed] = useState(false);
+  const errors = useRef(0);
+  const { log, lines } = useVideoLog(video);
+
+  // Load error: 1st → try the other cut, 2nd → reload, then give up to the poster. Each step stays on the page.
+  const onError = () => {
+    const v = video.current;
+    errors.current += 1;
+    log(`error ${v?.error?.code ?? "?"} ${v?.error?.message ?? ""} on ${v?.currentSrc.split("/").pop()}`);
+    if (errors.current === 1) setOverride(src === SRC_MOBILE ? SRC : SRC_MOBILE);
+    else if (errors.current === 2) v?.load();
+    else setFailed(true);
+  };
+  const retry = () => {
+    const v = video.current;
+    if (!v) return;
+    errors.current = 0;
+    setFailed(false);
+    userPaused.current = false;
+    v.load();
+    unmute(v);
+  };
 
   // Keep the speaker icon in sync with whatever changed the sound (the autoplay fallback, the browser, the buttons).
   useEffect(() => {
@@ -116,7 +141,7 @@ export default function TrailerPlayer() {
         preload="metadata"
         aria-label="Weatherise trailer, 60 seconds, with voiceover"
         onClick={togglePlay}
-        onError={() => setFailed(true)}
+        onError={onError}
       >
         <track kind="captions" src={CAPTIONS} srcLang="en" label="English" />
       </video>
@@ -127,15 +152,14 @@ export default function TrailerPlayer() {
           A tap always may start playback, even when the browser blocks autoplay. */}
       {!playing && (
         failed ? (
-          <a
-            href={SRC}
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Open the trailer"
+          <button
+            type="button"
+            onClick={retry}
+            aria-label="Play Trailer"
             className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[color:var(--l-ink)] shadow-[0_10px_40px_rgba(16,16,16,0.2)] md:h-20 md:w-20"
           >
             <Play size={30} className="ml-1" aria-hidden="true" />
-          </a>
+          </button>
         ) : (
           <button
             type="button"
@@ -177,6 +201,7 @@ export default function TrailerPlayer() {
           </button>
         </div>
       )}
+      <VideoDebug video={video} lines={lines} />
     </div>
   );
 }

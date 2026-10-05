@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import puppeteer from "puppeteer-core";
+import { FROM_FRAMES, WEB_TAGS, cut } from "../web-video.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BUILD = join(HERE, "build");
@@ -27,10 +28,7 @@ const NAME = SUBS ? "weatherise-trailer-captioned" : "weatherise-trailer";
 const FRAMES = join(tmpdir(), "weatherise-trailer-frames");
 
 const ff = (a) => execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...a], { stdio: "inherit" });
-// Frames are JPEG screenshots (full-range yuvj420p). iPhone / iPad decoders expect standard limited-range yuv420p;
-// full range shows washed-out or white video, or does not play at all. Convert explicitly and tag the stream.
-const VIDEO_RANGE = "scale=in_range=pc:out_range=tv,format=yuv420p";
-const RANGE_TAGS = ["-color_range", "tv", "-colorspace", "smpte170m"];
+// Screenshot frames → standard web video that iPhone / iPad play inline (see video/web-video.mjs).
 function h264() {
   const list = execFileSync("ffmpeg", ["-hide_banner", "-encoders"], { encoding: "utf8" });
   if (/\blibx264\b/.test(list)) return ["-c:v", "libx264", "-preset", "slow", "-crf", "16", "-tune", "animation"];
@@ -83,11 +81,11 @@ ff([
   // The captioned cut already shows them in frame, so it skips the soft subtitle track.
   ...(SUBS ? [] : ["-i", srtPath]),
   "-map", "0:v", "-map", "1:a", ...(SUBS ? [] : ["-map", "2:s"]),
-  ...h264(), "-vf", VIDEO_RANGE, ...RANGE_TAGS,
+  ...h264(), "-vf", FROM_FRAMES, ...WEB_TAGS,
   "-af", "loudnorm=I=-14:TP=-1.0:LRA=11",
   "-c:a", "aac", "-b:a", "256k", "-ar", "48000",
   ...(SUBS ? [] : ["-c:s", "mov_text", "-metadata:s:s:0", "language=eng"]),
-  "-t", duration.toFixed(3), "-movflags", "+faststart", mp4,
+  "-t", duration.toFixed(3), mp4,
 ]);
 const poster = join(FRAMES, `${String(Math.round((tl.lines.find((l) => l.id === "r2").end + 2.2) * FPS)).padStart(5, "0")}.jpg`);
 if (existsSync(poster) && !SUBS) ff(["-i", poster, "-q:v", "3", join(OUT, "weatherise-trailer.jpg")]);
@@ -98,7 +96,7 @@ if (!SUBS) {
     const enc = /\bh264_videotoolbox\b/.test(execFileSync("ffmpeg", ["-hide_banner", "-encoders"], { encoding: "utf8" }))
       ? ["-c:v", "h264_videotoolbox", "-b:v", `${kbps}k`, "-maxrate", `${Math.round(kbps * 1.35)}k`, "-profile:v", profile]
       : ["-c:v", "libx264", "-preset", "slow", "-b:v", `${kbps}k`, "-maxrate", `${Math.round(kbps * 1.35)}k`, "-bufsize", `${kbps * 2}k`, "-profile:v", profile];
-    ff(["-i", mp4, "-map", "0:v", "-map", "0:a", "-vf", `scale=${width}:-2,fps=30,format=yuv420p`, ...enc, ...RANGE_TAGS, "-c:a", "aac", "-b:a", `${aKbps}k`, "-ac", "2", "-movflags", "+faststart", join(OUT, `${name}.mp4`)]);
+    ff(["-i", mp4, "-map", "0:v", "-map", "0:a", "-vf", cut(width, ",fps=30"), ...enc, ...WEB_TAGS, "-c:a", "aac", "-b:a", `${aKbps}k`, "-ac", "2", join(OUT, `${name}.mp4`)]);
   };
   cut(1600, 3000, "high", 160, "weatherise-trailer-web");
   cut(1280, 1600, "main", 128, "weatherise-trailer-mobile");
