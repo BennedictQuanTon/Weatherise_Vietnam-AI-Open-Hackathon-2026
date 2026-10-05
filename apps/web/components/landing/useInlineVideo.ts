@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { prefersReducedMotion } from "./motion";
 
 /** Phones (≤ 767 px) get the lighter cut. Chosen after mount, so the server HTML and hydration agree. */
 export function useVideoSrc(desktop: string, mobile: string) {
@@ -20,8 +19,14 @@ export function useVideoSrc(desktop: string, mobile: string) {
  * resume a script-started video by itself. So rather than a single play() call, this retries once a second
  * while the video should be running. `playing` follows real playback (the "playing" event, not "play"), and
  * `blocked` turns on when the browser keeps refusing (e.g. Low Power Mode) so the UI can offer a Play button.
+ * Videos have a pause control, so this autoplays even with Reduce Motion on (iOS users often enable it).
+ * `soundFirst`: on desktop, try with sound once (allowed for sites the visitor has engaged with), else muted.
  */
-export function useInlineVideo(ref: React.RefObject<HTMLVideoElement>, want: boolean, userPaused?: React.MutableRefObject<boolean>) {
+export function useInlineVideo(
+  ref: React.RefObject<HTMLVideoElement>,
+  want: boolean,
+  { userPaused, soundFirst = false }: { userPaused?: React.MutableRefObject<boolean>; soundFirst?: boolean } = {},
+) {
   const [playing, setPlaying] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const inView = useRef(false);
@@ -68,13 +73,23 @@ export function useInlineVideo(ref: React.RefObject<HTMLVideoElement>, want: boo
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
-    if (!want || prefersReducedMotion()) {
+    if (!want) {
       if (!v.paused) v.pause();
       return;
     }
     let refusals = 0;
+    let triedSound = !soundFirst || !window.matchMedia("(pointer: fine)").matches;
     const tick = () => {
       if (!inView.current || userPaused?.current || document.hidden || !v.paused || v.ended || !v.currentSrc) return;
+      if (!triedSound) {
+        triedSound = true;
+        v.muted = false;
+        v.play().catch(() => {
+          v.muted = true;
+          v.play().catch(() => {});
+        });
+        return;
+      }
       v.play().then(
         () => (refusals = 0),
         () => {
@@ -86,7 +101,7 @@ export function useInlineVideo(ref: React.RefObject<HTMLVideoElement>, want: boo
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, [ref, want, userPaused]);
+  }, [ref, want, userPaused, soundFirst]);
 
   return { playing, blocked };
 }
