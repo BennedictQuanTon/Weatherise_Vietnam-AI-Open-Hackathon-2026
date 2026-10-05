@@ -27,6 +27,10 @@ const NAME = SUBS ? "weatherise-trailer-captioned" : "weatherise-trailer";
 const FRAMES = join(tmpdir(), "weatherise-trailer-frames");
 
 const ff = (a) => execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...a], { stdio: "inherit" });
+// Frames are JPEG screenshots (full-range yuvj420p). iPhone / iPad decoders expect standard limited-range yuv420p;
+// full range shows washed-out or white video, or does not play at all. Convert explicitly and tag the stream.
+const VIDEO_RANGE = "scale=in_range=pc:out_range=tv,format=yuv420p";
+const RANGE_TAGS = ["-color_range", "tv", "-colorspace", "smpte170m"];
 function h264() {
   const list = execFileSync("ffmpeg", ["-hide_banner", "-encoders"], { encoding: "utf8" });
   if (/\blibx264\b/.test(list)) return ["-c:v", "libx264", "-preset", "slow", "-crf", "16", "-tune", "animation"];
@@ -79,7 +83,7 @@ ff([
   // The captioned cut already shows them in frame, so it skips the soft subtitle track.
   ...(SUBS ? [] : ["-i", srtPath]),
   "-map", "0:v", "-map", "1:a", ...(SUBS ? [] : ["-map", "2:s"]),
-  ...h264(), "-pix_fmt", "yuv420p",
+  ...h264(), "-vf", VIDEO_RANGE, ...RANGE_TAGS,
   "-af", "loudnorm=I=-14:TP=-1.0:LRA=11",
   "-c:a", "aac", "-b:a", "256k", "-ar", "48000",
   ...(SUBS ? [] : ["-c:s", "mov_text", "-metadata:s:s:0", "language=eng"]),
@@ -94,7 +98,7 @@ if (!SUBS) {
     const enc = /\bh264_videotoolbox\b/.test(execFileSync("ffmpeg", ["-hide_banner", "-encoders"], { encoding: "utf8" }))
       ? ["-c:v", "h264_videotoolbox", "-b:v", `${kbps}k`, "-maxrate", `${Math.round(kbps * 1.35)}k`, "-profile:v", profile]
       : ["-c:v", "libx264", "-preset", "slow", "-b:v", `${kbps}k`, "-maxrate", `${Math.round(kbps * 1.35)}k`, "-bufsize", `${kbps * 2}k`, "-profile:v", profile];
-    ff(["-i", mp4, "-map", "0:v", "-map", "0:a", "-vf", `scale=${width}:-2,fps=30`, ...enc, "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", `${aKbps}k`, "-ac", "2", "-movflags", "+faststart", join(OUT, `${name}.mp4`)]);
+    ff(["-i", mp4, "-map", "0:v", "-map", "0:a", "-vf", `scale=${width}:-2,fps=30,format=yuv420p`, ...enc, ...RANGE_TAGS, "-c:a", "aac", "-b:a", `${aKbps}k`, "-ac", "2", "-movflags", "+faststart", join(OUT, `${name}.mp4`)]);
   };
   cut(1600, 3000, "high", 160, "weatherise-trailer-web");
   cut(1280, 1600, "main", 128, "weatherise-trailer-mobile");
