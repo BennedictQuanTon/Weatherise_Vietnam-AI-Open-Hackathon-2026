@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Weatherise — Poster (Back)</title>
+<style>
+  /* Back side of the posters, same sizes as poster.html: ?layout=v (1200×1800) · ?layout=h (1920×1080).
+     window.STACK (brand icons) is injected by render.mjs from components/landing/stackIcons.ts. */
+  :root {
+    --ink: #101010; --smoke: #6e6e73; --pewter: #ababb0; --mist: #f0f0f0; --snow: #f5f5f7;
+    --blue: #0088ff; --green: #34c759; --orange: #f06413;
+    --brand: linear-gradient(90deg, #0088ff 0%, #12a7c6 55%, #34c759 100%);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #fff; }
+  body { font-family: system-ui, -apple-system, "SF Pro Display", sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
+  .poster { position: relative; overflow: hidden; background: #fff; }
+  .grad { background: var(--brand); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .glow { position: absolute; border-radius: 50%; pointer-events: none; }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand img { width: 38px; height: 38px; }
+  .brand span { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+  .meta { font-size: 17px; font-weight: 600; color: var(--smoke); }
+  .eyebrow { font-weight: 600; color: var(--blue); letter-spacing: -0.005em; }
+  .h2 { font-weight: 700; letter-spacing: -0.04em; line-height: 1.02; }
+  .lede { color: var(--smoke); line-height: 1.4; }
+  .label { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pewter); white-space: nowrap; }
+
+  /* MacBook (same build as the front) */
+  .mac .lid { margin: 0 auto; width: 86%; border-radius: 2.4%/3.6%; padding: 0.22%; background: linear-gradient(180deg,#a5a7ab,#6d6f73 40%,#56585c); }
+  .mac .bezel { position: relative; border-radius: 2.2%/3.4%; background: #060607; padding: 1.55% 1.55% 2.2%; }
+  .mac .screen { position: relative; border-radius: 1.1%/1.7% 1.1%/1.7% 0.4%/0.6% 0.4%/0.6%; background: #fff; aspect-ratio: 3024/1964; }
+  .mac .screen > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: inherit; }
+  .mac .notch { position: absolute; left: 50%; top: 0; height: 4.1%; width: 11.5%; transform: translateX(-50%); border-radius: 0 0 14%/36% 14%/36%; background: #060607; z-index: 2; }
+  .mac .glass { position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(115deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.03) 30%, transparent 31%); z-index: 1; }
+  .mac .hinge { margin: 0 auto; height: 0.45%; min-height: 4px; width: 80%; background: linear-gradient(180deg,#3a3b3e,#141415); }
+  .mac .base { position: relative; height: 14px; border-radius: 0 0 2.2%/90% 2.2%/90%; background: linear-gradient(180deg,#f4f5f6 0%,#dadbdd 18%,#c3c5c8 55%,#9c9ea2 82%,#77797d 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.9); }
+  .mac .scoop { position: absolute; left: 50%; top: 0; height: 52%; width: 15%; transform: translateX(-50%); border-radius: 0 0 18%/100% 18%/100%; background: linear-gradient(180deg,#9fa1a5,#c6c8cb 70%,#d9dadc); }
+  .mac .shadow { margin: 6px auto 0; height: 22px; width: 92%; border-radius: 50%; background: radial-gradient(closest-side, rgba(16,16,16,0.2), transparent); }
+
+  /* Pins on the screen */
+  .pin { position: absolute; z-index: 3; transform: translate(-50%, -50%); display: grid; place-items: center; border-radius: 50%; background: var(--blue); color: #fff; font-weight: 700;
+         box-shadow: 0 0 0 3px #fff, 0 0 0 9px rgba(0,136,255,0.22), 0 6px 16px rgba(0,60,140,0.35); }
+  .pin.dot { width: 16px; height: 16px; }
+  .pin.num { width: 30px; height: 30px; font-size: 15px; }
+
+  /* Callouts (horizontal: pulled out with leader lines; vertical: numbered legend) */
+  .callout b { display: block; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); }
+  .callout span { display: block; color: var(--smoke); line-height: 1.35; }
+  .leaders { position: absolute; inset: 0; pointer-events: none; z-index: 2; overflow: visible; }
+
+  /* Pipeline */
+  .bar { display: flex; height: 14px; border-radius: 999px; overflow: hidden; gap: 3px; }
+  .bar i { display: block; height: 100%; }
+  .step { display: flex; gap: 12px; align-items: flex-start; }
+  .step .sw { flex: none; width: 12px; height: 12px; border-radius: 4px; margin-top: 5px; }
+  .step b { display: block; font-weight: 700; }
+  .step span { display: block; color: var(--smoke); }
+  .step em { margin-left: auto; font-style: normal; font-weight: 600; color: var(--ink); white-space: nowrap; }
+
+  /* Process */
+  .phase { position: relative; }
+  .phase .n { font-weight: 700; color: var(--blue); }
+  .phase b { display: block; font-weight: 700; letter-spacing: -0.01em; }
+  .phase span { display: block; color: var(--smoke); line-height: 1.38; }
+
+  /* Team */
+  .photo { position: relative; overflow: hidden; background: var(--snow); }
+  .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 30px 16px 12px; color: #fff; font-weight: 600; background: linear-gradient(transparent, rgba(0,0,0,0.55)); }
+  .member { display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .member img { border-radius: 50%; object-fit: cover; object-position: center 20%; box-shadow: 0 0 0 3px #fff, 0 6px 18px rgba(16,16,16,0.14); }
+  .member b { display: block; font-weight: 700; letter-spacing: -0.01em; }
+  .member span { display: block; color: var(--smoke); }
+  .stack { display: flex; flex-wrap: wrap; align-items: center; }
+  .stack div { display: inline-flex; align-items: center; color: var(--ink); font-weight: 600; white-space: nowrap; }
+  .card { background: var(--snow); }
+
+  /* ── Horizontal 1920×1080 ── */
+  .h { width: 1920px; height: 1080px; padding: 64px 96px 60px; display: flex; flex-direction: column; }
+  .h > * { flex-shrink: 0; }
+  .h .top { display: flex; justify-content: space-between; align-items: center; }
+  .h .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 60px; margin-top: 28px; }
+  .h .eyebrow { font-size: 20px; }
+  .h .h2 { font-size: 54px; margin-top: 8px; white-space: nowrap; }
+  .h .lede { font-size: 19px; max-width: 520px; padding-bottom: 4px; }
+  .h .main { position: relative; display: grid; grid-template-columns: 1fr 330px; column-gap: 56px; margin-top: 30px; height: 500px; }
+  .h .stage { position: relative; }
+  .h .mac { position: absolute; left: 290px; top: 4px; width: 820px; }
+  .h .callout { position: absolute; width: 250px; }
+  .h .callout b { font-size: 17px; }
+  .h .callout span { font-size: 14px; margin-top: 3px; }
+  .h .callout.l { left: 0; text-align: right; }
+  .h .callout.r { right: 0; }
+  .h .pipe { padding-top: 6px; }
+  .h .pipe .total { display: flex; align-items: baseline; gap: 10px; margin-top: 8px; }
+  .h .pipe .total strong { font-size: 44px; font-weight: 700; letter-spacing: -0.04em; }
+  .h .pipe .total span { font-size: 15px; color: var(--smoke); }
+  .h .pipe .bar { margin-top: 14px; }
+  .h .steps { display: grid; gap: 13px; margin-top: 20px; }
+  .h .step b { font-size: 15px; }
+  .h .step span { font-size: 13px; margin-top: 1px; }
+  .h .step em { font-size: 14px; }
+  .h .step .ms { display: none; }
+  .h .bottom { display: grid; grid-template-columns: 280px 1fr 600px; column-gap: 40px; margin-top: auto; padding-top: 26px; border-top: 1.5px solid var(--mist); }
+  .h .photo { height: 196px; border-radius: 20px; }
+  .h .photo figcaption { font-size: 13px; }
+  .h .phases { display: grid; grid-template-columns: repeat(5, 1fr); column-gap: 22px; margin-top: 16px; }
+  .h .phase { padding-top: 16px; border-top: 2px solid var(--mist); }
+  .h .phase::before { content: ""; position: absolute; top: -6px; left: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 4px #fff; }
+  .h .phase:last-child::before { background: var(--orange); }
+  .h .phase .n { font-size: 13px; }
+  .h .phase b { font-size: 16px; margin-top: 4px; }
+  .h .phase span { font-size: 13px; margin-top: 5px; }
+  .h .team { display: grid; grid-template-columns: repeat(4, 1fr); column-gap: 12px; margin-top: 16px; }
+  .h .member b { white-space: nowrap; }
+  .h .member img { width: 72px; height: 72px; }
+  .h .member b { font-size: 14px; margin-top: 10px; }
+  .h .member span { font-size: 12px; margin-top: 2px; }
+  .h .mentors { margin-top: 14px; font-size: 13px; color: var(--smoke); text-align: center; }
+  .h .mentors b { color: var(--ink); font-weight: 600; }
+  .h .stackrow { margin-top: 16px; gap: 8px 16px; flex-wrap: nowrap; }
+  .h .stack div { gap: 6px; font-size: 13px; }
+  .h .stack svg { width: 16px; height: 16px; }
+
+  /* ── Vertical 1200×1800 ── */
+  .v { width: 1200px; height: 1800px; padding: 84px 90px 56px; display: flex; flex-direction: column; }
+  .v > * { flex-shrink: 0; }
+  .v .top { display: flex; justify-content: space-between; align-items: center; }
+  .v .head { margin-top: 34px; }
+  .v .eyebrow { font-size: 22px; }
+  .v .h2 { font-size: 64px; margin-top: 10px; }
+  .v .lede { font-size: 21px; margin-top: 16px; max-width: 900px; }
+  .v .stage { position: relative; margin-top: 26px; }
+  .v .mac { position: relative; margin: 0 auto; width: 800px; }
+  .v .legend { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 22px; margin-top: 18px; }
+  .v .callout { display: grid; grid-template-columns: 30px 1fr; column-gap: 12px; align-items: start; }
+  .v .callout i { width: 26px; height: 26px; border-radius: 50%; background: var(--blue); color: #fff; font-style: normal; font-size: 13px; font-weight: 700; display: grid; place-items: center; margin-top: 1px; }
+  .v .callout b { font-size: 16px; }
+  .v .callout span { font-size: 14px; margin-top: 3px; }
+  .v .pipe { margin-top: 26px; padding: 20px 26px; border-radius: 24px; }
+  .v .pipe .row { display: flex; justify-content: space-between; align-items: baseline; }
+  .v .pipe .total strong { font-size: 34px; font-weight: 700; letter-spacing: -0.04em; }
+  .v .pipe .total span { font-size: 16px; color: var(--smoke); margin-left: 8px; }
+  .v .pipe .bar { margin-top: 14px; height: 14px; }
+  .v .steps { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; margin-top: 18px; }
+  .v .step { gap: 8px; }
+  .v .step .sw { width: 10px; height: 10px; margin-top: 4px; }
+  .v .step b { font-size: 13.5px; }
+  .v .step span { font-size: 11.5px; margin-top: 1px; line-height: 1.3; }
+  .v .step em { display: none; }
+  .v .step .ms { display: block; color: var(--ink); font-weight: 600; font-size: 12.5px; margin-top: 3px; }
+  .v .built { display: grid; grid-template-columns: 400px 1fr; column-gap: 40px; margin-top: 24px; }
+  .v .photo { height: 100%; border-radius: 22px; }
+  .v .photo figcaption { font-size: 15px; }
+  .v .phases { display: grid; gap: 8px; margin-top: 12px; }
+  .v .phase { padding-left: 26px; }
+  .v .phase::before { content: ""; position: absolute; left: 0; top: 7px; width: 10px; height: 10px; border-radius: 50%; background: var(--blue); }
+  .v .phase::after { content: ""; position: absolute; left: 4px; top: 22px; bottom: -14px; width: 2px; background: var(--mist); }
+  .v .phase:last-child::after { display: none; }
+  .v .phase:last-child::before { background: var(--orange); }
+  .v .phase .n { display: none; }
+  .v .phase b { font-size: 17px; }
+  .v .phase span { font-size: 13.5px; margin-top: 1px; }
+  .v .teamrow { display: grid; grid-template-columns: repeat(4, 1fr) 1.25fr; column-gap: 16px; align-items: center; margin-top: 22px; }
+  .v .member img { width: 76px; height: 76px; }
+  .v .member b { font-size: 15px; margin-top: 12px; }
+  .v .member span { font-size: 13px; margin-top: 2px; }
+  .v .mentors { font-size: 15px; color: var(--smoke); line-height: 1.5; padding-left: 18px; border-left: 1.5px solid var(--mist); }
+  .v .mentors b { color: var(--ink); font-weight: 600; }
+  .v .foot { margin-top: auto; padding-top: 16px; border-top: 1.5px solid var(--mist); display: flex; align-items: center; gap: 22px; }
+  .v .stack { gap: 10px 18px; }
+  .v .stack { flex-wrap: nowrap; }
+  .v .stack div { gap: 6px; font-size: 13px; }
+  .v .stack svg { width: 16px; height: 16px; }
+</style>
+</head>
+<body>
+<script>
+const layout = new URLSearchParams(location.search).get("layout") || "v";
+const P = "../../public";
+const STACK = window.STACK || [];
+
+// Callouts: x / y are the pin positions in % of the captured screen (public/landing/devices/mac-construction.jpg).
+const PINS = [
+  { id: "question", x: 13.4, y: 20.9, side: "l", title: "Ask like a colleague", body: "Plain English or Vietnamese." },
+  { id: "verdict", x: 15.1, y: 41.9, side: "l", title: "One clear verdict", body: "Go, reschedule, or stop, plus the fix." },
+  { id: "alert", x: 14.8, y: 65.3, side: "l", title: "Dark-red safety alerts", body: "The moment a safety limit is crossed." },
+  { id: "evidence", x: 16.6, y: 74.4, side: "l", title: "Evidence on every number", body: "Each forecast value beside its limit." },
+  { id: "rules", x: 14.8, y: 89.8, side: "l", title: "Pass / fail on every rule", body: "Friday vs. Thursday, rule by rule." },
+  { id: "followup", x: 84.5, y: 16.3, side: "r", title: "Ask a follow-up", body: "“What if Saturday?” re-runs the plan." },
+  { id: "map", x: 75.3, y: 60.8, side: "r", title: "Storm radius on the map", body: "Lightning within 10 km of the site." },
+];
+
+// Pipeline: name, model / agent (long, short), median ms (the 4.8 s budget), color (same as the landing page).
+const PIPE = [
+  ["Parse", ["Qwen 3.5 27B · vLLM", "Qwen 3.5 27B"], 600, "#0088ff"],
+  ["Orchestrate", ["LangGraph", "LangGraph"], 160, "#5856d6"],
+  [["Gather Context", "Context"], ["MCP · Qdrant RAG", "MCP · Qdrant"], 140, "#30b0c7"],
+  [["Fetch Weather", "Weather"], ["MCP · 7 providers in parallel", "7 providers"], 1200, "#32ade6"],
+  [["Reach Consensus", "Consensus"], ["Path B · Nemotron arbiter", "Nemotron arbiter"], 700, "#34c759"],
+  [["Apply Rules", "Rules"], ["Deterministic rule engine", "Rule engine"], 50, "#ff9500"],
+  ["Answer", ["Nemotron-3 Super · NVIDIA NIM", "Nemotron-3 Super"], 1900, "#cb30e0"],
+].map(([n, a, ms, c]) => [Array.isArray(n) ? n[layout === "h" ? 0 : 1] : n, layout === "h" ? a[0] : a[1], ms, c]);
+const TOTAL = PIPE.reduce((a, s) => a + s[2], 0);
+
+const PHASES = [
+  ["Research", "How weather breaks plans in Da Nang: 4 problems, 17 sources."],
+  ["Design", "Seven agents, one pipeline: parse, gather, fuse, check, answer."],
+  ["Build on 8× H200", "Nemotron-3 Super & Qwen 3.5 on NIM / vLLM; 7 weather APIs via MCP."],
+  ["Ground & harden", "Rules from TCVN & QCVN codes; NeMo Guardrails & red-teaming."],
+  ["Pitch", "June 9–12, Da Nang: Top 10 Finalist."],
+];
+
+const TEAM = [
+  ["Long Quan Ton", "Project Lead · AI Developer", "long-quan-ton"],
+  ["Khanh Tuong Huynh", "Technical Lead · AI Developer", "khanh-tuong-huynh"],
+  ["Yoshio Nomura", "LLMOps · AI Developer", "yoshio-nomura"],
+  ["Gia Thanh Le", "UI/UX Designer", "gia-thanh-le"],
+];
+const MENTORS = `Mentored by <b>Yash Gupta</b> · NVIDIA India, <b>Van Le</b> · NVIDIA USA, <b>Tran Minh Quan</b> · NVIDIA Vietnam`;
+const STACK_SHOWN = layout === "h"
+  ? ["nvidia", "langgraph", "modelcontextprotocol", "qwen", "vllm", "qdrant", "redis", "fastapi", "nextdotjs"]
+  : ["nvidia", "langgraph", "modelcontextprotocol", "qwen", "vllm", "qdrant", "postgresql", "redis", "fastapi"];
+
+const brand = `<div class="brand"><img src="${P}/favicon.svg" alt=""><span>Weatherise</span></div>`;
+const meta = `<div class="meta">Top 10 Finalist · Vietnam AI Open Hackathon 2026</div>`;
+const head = (lede) => `<div><div class="eyebrow">Inside Weatherise</div><h2 class="h2">From one question${layout === "h" ? " " : "<br/>"}to a <span class="grad">safe decision.</span></h2></div>${lede}`;
+const ledeText = "Seven agents gather context, fuse seven forecasts, check real safety rules, and answer in under five seconds.";
+const mac = (pins) => `<div class="mac"><div class="lid"><div class="bezel"><div class="screen"><img src="${P}/landing/devices/mac-construction.jpg" alt=""><div class="glass"></div>${pins}</div><div class="notch"></div></div></div><div class="hinge"></div><div class="base"><div class="scoop"></div></div><div class="shadow"></div></div>`;
+const bar = `<div class="bar">${PIPE.map(([, , ms, c]) => `<i style="flex:${ms};background:${c}"></i>`).join("")}</div>`;
+const steps = PIPE.map(([n, a, ms, c]) => `<div class="step"><i class="sw" style="background:${c}"></i><div><b>${n}</b><span>${a}</span><span class="ms tnum">${ms >= 1000 ? (ms / 1000).toFixed(1) + " s" : ms + " ms"}</span></div><em class="tnum">${ms >= 1000 ? (ms / 1000).toFixed(1) + " s" : ms + " ms"}</em></div>`).join("");
+const phases = PHASES.map(([t, d], i) => `<div class="phase"><div class="n">${String(i + 1).padStart(2, "0")}</div><b>${t}</b><span>${d}</span></div>`).join("");
+const team = TEAM.map(([n, r, f]) => `<div class="member"><img src="${P}/landing/team/${f}.jpg" alt=""><b>${n}</b><span>${layout === "h" ? r.split(" · ")[0] : r}</span></div>`).join("");
+const photo = `<figure class="photo"><img src="${P}/landing/team/team-event.jpg" alt=""><figcaption>On site in Da Nang, June 2026</figcaption></figure>`;
+const stackItems = STACK_SHOWN.map((slug) => STACK.find((s) => s.slug === slug)).filter(Boolean)
+  .map((s) => `<div><svg viewBox="0 0 24 24" fill="${s.hex === "#000000" ? "#101010" : s.hex}"><path d="${s.path}"/></svg>${s.name}</div>`).join("")
+  + (layout === "h" ? "" : `<div style="color:var(--smoke)">· 8× NVIDIA H200</div>`);
+const glow = (w, h, x, y, c) => `<div class="glow" style="width:${w}px;height:${h}px;left:${x}px;top:${y}px;background:radial-gradient(closest-side, ${c}, transparent)"></div>`;
+
+if (layout === "h") {
+  const pins = PINS.map((p) => `<div class="pin dot" data-id="${p.id}" style="left:${p.x}%;top:${p.y}%"></div>`).join("");
+  const callouts = PINS.map((p) => `<div class="callout ${p.side}" data-for="${p.id}"><b>${p.title}</b><span>${p.body}</span></div>`).join("");
+  document.body.innerHTML = `<div class="poster h" id="poster">
+    ${glow(1400, 1100, -560, -460, "rgba(0,136,255,0.09)")}${glow(1300, 1000, 1100, 420, "rgba(52,199,89,0.08)")}
+    <div class="top">${brand}${meta}</div>
+    <div class="head">${head(`<p class="lede">${ledeText}</p>`)}</div>
+    <div class="main">
+      <div class="stage">${mac(pins)}${callouts}<svg class="leaders"></svg></div>
+      <div class="pipe"><div class="label">From question to decision</div>
+        <div class="total"><strong class="tnum">4.8 s</strong><span>median, end to end</span></div>${bar}<div class="steps">${steps}</div></div>
+    </div>
+    <div class="bottom">
+      ${photo}
+      <div><div class="label">How we built it</div><div class="phases">${phases}</div><div class="stack stackrow">${stackItems}</div></div>
+      <div><div class="label" style="text-align:center">The team · HCMUT – UTS</div><div class="team">${team}</div><div class="mentors">${MENTORS}</div></div>
+    </div>
+  </div>`;
+} else {
+  const pins = PINS.map((p, i) => `<div class="pin num" style="left:${p.x}%;top:${p.y}%">${i + 1}</div>`).join("");
+  const legend = PINS.map((p, i) => `<div class="callout"><i>${i + 1}</i><div><b>${p.title}</b><span>${p.body}</span></div></div>`).join("");
+  document.body.innerHTML = `<div class="poster v" id="poster">
+    ${glow(1300, 1100, -460, -380, "rgba(0,136,255,0.09)")}${glow(1300, 1100, 380, 1000, "rgba(52,199,89,0.08)")}
+    <div class="top">${brand}${meta}</div>
+    <div class="head">${head("")}</div>
+    <div class="stage">${mac(pins)}</div>
+    <div class="legend">${legend}</div>
+    <div class="pipe card"><div class="row"><div class="label">From question to decision</div><div class="total"><strong class="tnum">4.8 s</strong><span>median, end to end</span></div></div>${bar}<div class="steps">${steps}</div></div>
+    <div class="built">${photo}<div><div class="label">How we built it</div><div class="phases">${phases}</div></div></div>
+    <div class="teamrow">${team}<div class="mentors">${MENTORS}</div></div>
+    <div class="foot"><div class="label">Built with</div><div class="stack">${stackItems}</div></div>
+  </div>`;
+}
+
+// Horizontal: stack callouts beside their pins (no overlaps), then draw the leader lines.
+window.layoutLeaders = () => {
+  if (layout !== "h") return;
+  const stage = document.querySelector(".stage");
+  const sb = stage.getBoundingClientRect();
+  const lid = document.querySelector(".mac .lid").getBoundingClientRect();
+  const svg = document.querySelector(".leaders");
+  let paths = "";
+  for (const side of ["l", "r"]) {
+    let floor = -Infinity;
+    const items = PINS.filter((p) => p.side === side)
+      .map((p) => ({ p, pin: document.querySelector(`.pin[data-id="${p.id}"]`).getBoundingClientRect(), el: document.querySelector(`.callout[data-for="${p.id}"]`) }))
+      .sort((a, b) => a.pin.top - b.pin.top);
+    for (const it of items) {
+      const py = it.pin.top + it.pin.height / 2 - sb.top;
+      const h = it.el.offsetHeight;
+      const top = Math.max(py - 11, floor);
+      it.el.style.top = `${top}px`;
+      floor = top + h + 16;
+      const ly = top + 11; // line meets the callout title
+      const px = it.pin.left + it.pin.width / 2 - sb.left;
+      const lx = side === "l" ? it.el.offsetLeft + it.el.offsetWidth + 14 : it.el.offsetLeft - 14;
+      const ex = side === "l" ? lid.left - sb.left - 18 : lid.right - sb.left + 18;
+      paths += `<path d="M${lx} ${ly} H${ex} L${px} ${py}" fill="none" stroke="#101010" stroke-opacity="0.38" stroke-width="1.5"/><circle cx="${lx}" cy="${ly}" r="3" fill="#101010" fill-opacity="0.5"/>`;
+    }
+  }
+  svg.setAttribute("width", sb.width);
+  svg.setAttribute("height", sb.height);
+  svg.innerHTML = paths;
+};
+window.addEventListener("load", () => window.layoutLeaders());
+</script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Check, CloudSun, DatabaseZap, GitMerge, MessageSquareText, ShieldCheck, Sparkles, Volume2, VolumeX, Workflow } from "lucide-react";
+import { ArrowRight, Check, CloudSun, DatabaseZap, GitMerge, MessageSquareText, Play, ShieldCheck, Sparkles, Volume2, VolumeX, Workflow } from "lucide-react";
 import { DOMAINS, FEATURES, PIPELINE } from "./content";
 import { MaskHeading, Reveal, prefersReducedMotion, useStickyProgress } from "./motion";
 import { MacBookPro } from "./Devices";
@@ -63,17 +63,31 @@ function FeatureSlide({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [muted, setMuted] = useState(true);
   const [failed, setFailed] = useState(false);
+  // Autoplay refused (e.g. iOS Low Power Mode): show a Play button instead of a frozen frame.
+  const [blocked, setBlocked] = useState(false);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = true;
+    v.defaultMuted = true;
+    v.setAttribute("muted", "");
+  }, []);
 
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     if (active && !prefersReducedMotion()) {
       v.currentTime = 0;
-      v.play().catch(() => {});
+      v.play().then(() => setBlocked(false), () => setBlocked(true));
     } else {
       v.pause();
     }
   }, [active]);
+
+  const playNow = () => {
+    videoRef.current?.play().then(() => setBlocked(false), () => {});
+  };
 
   // Only one reel plays with sound at a time.
   useEffect(() => {
@@ -95,7 +109,8 @@ function FeatureSlide({
     setMuted(v.muted);
     if (!v.muted) {
       window.dispatchEvent(new CustomEvent(UNMUTE_EVENT, { detail: feature.video }));
-      v.play().catch(() => {});
+      // A tap is a real user activation, so this also starts a reel whose autoplay was blocked.
+      v.play().then(() => setBlocked(false), () => {});
     }
   };
 
@@ -109,15 +124,27 @@ function FeatureSlide({
             <video
               ref={videoRef}
               className="absolute inset-0 h-full w-full object-cover"
-              src={feature.video}
               poster={feature.poster}
               muted
               playsInline
               preload="metadata"
               aria-label={`${feature.title}: product demo`}
               onEnded={() => active && onEnded()}
-              onError={() => setFailed(true)}
-            />
+            >
+              {/* 960 px cut for phones; onError on the last source = no playable file at all */}
+              <source src={feature.video.replace(/\.mp4$/, "-mobile.mp4")} type="video/mp4" media="(max-width: 767px)" />
+              <source src={feature.video} type="video/mp4" onError={() => setFailed(true)} />
+            </video>
+          )}
+          {!failed && active && blocked && (
+            <button
+              type="button"
+              onClick={playNow}
+              aria-label={`Play ${feature.title}`}
+              className="absolute left-1/2 top-1/2 z-10 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[color:var(--l-ink)] shadow-[0_10px_40px_rgba(16,16,16,0.2)] backdrop-blur focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[color:var(--l-blue)]"
+            >
+              <Play size={26} className="ml-1" aria-hidden="true" />
+            </button>
           )}
         </MacBookPro>
       </div>
