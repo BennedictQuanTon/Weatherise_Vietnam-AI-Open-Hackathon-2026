@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, CloudSun, DatabaseZap, GitMerge, MessageSquareText, Play, ShieldCheck, Sparkles, Volume2, VolumeX, Workflow } from "lucide-react";
 import { DOMAINS, FEATURES, PIPELINE } from "./content";
 import { MaskHeading, Reveal, prefersReducedMotion, useStickyProgress } from "./motion";
+import { useInlineVideo, useVideoSrc } from "./useInlineVideo";
 import { MacBookPro } from "./Devices";
 import Slider from "./Slider";
 import { STACK_ICONS, type StackIcon } from "./stackIcons";
@@ -63,30 +64,19 @@ function FeatureSlide({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [muted, setMuted] = useState(true);
   const [failed, setFailed] = useState(false);
-  // Autoplay refused (e.g. iOS Low Power Mode): show a Play button instead of a frozen frame.
-  const [blocked, setBlocked] = useState(false);
+  // 960 px cut on phones; useInlineVideo keeps the active reel playing (and retries on iOS, see there).
+  const src = useVideoSrc(feature.video, feature.video.replace(/\.mp4$/, "-mobile.mp4"));
+  const { blocked } = useInlineVideo(videoRef, active);
 
+  // Each time a reel becomes the active slide it starts from the top.
   useEffect(() => {
     const v = videoRef.current;
-    if (!v) return;
-    v.muted = true;
-    v.defaultMuted = true;
-    v.setAttribute("muted", "");
-  }, []);
-
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (active && !prefersReducedMotion()) {
-      v.currentTime = 0;
-      v.play().then(() => setBlocked(false), () => setBlocked(true));
-    } else {
-      v.pause();
-    }
+    if (v && active && v.currentSrc) v.currentTime = 0;
   }, [active]);
 
+  // Autoplay refused (e.g. iOS Low Power Mode): a tap on the Play button always may start it.
   const playNow = () => {
-    videoRef.current?.play().then(() => setBlocked(false), () => {});
+    videoRef.current?.play().catch(() => {});
   };
 
   // Only one reel plays with sound at a time.
@@ -110,7 +100,7 @@ function FeatureSlide({
     if (!v.muted) {
       window.dispatchEvent(new CustomEvent(UNMUTE_EVENT, { detail: feature.video }));
       // A tap is a real user activation, so this also starts a reel whose autoplay was blocked.
-      v.play().then(() => setBlocked(false), () => {});
+      v.play().catch(() => {});
     }
   };
 
@@ -124,17 +114,15 @@ function FeatureSlide({
             <video
               ref={videoRef}
               className="absolute inset-0 h-full w-full object-cover"
+              src={src}
               poster={feature.poster}
               muted
               playsInline
               preload="metadata"
               aria-label={`${feature.title}: product demo`}
               onEnded={() => active && onEnded()}
-            >
-              {/* 960 px cut for phones; onError on the last source = no playable file at all */}
-              <source src={feature.video.replace(/\.mp4$/, "-mobile.mp4")} type="video/mp4" media="(max-width: 767px)" />
-              <source src={feature.video} type="video/mp4" onError={() => setFailed(true)} />
-            </video>
+              onError={() => setFailed(true)}
+            />
           )}
           {!failed && active && blocked && (
             <button
