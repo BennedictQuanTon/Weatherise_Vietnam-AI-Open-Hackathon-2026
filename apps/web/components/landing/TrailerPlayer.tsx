@@ -22,6 +22,8 @@ export default function TrailerPlayer() {
   const [muted, setMuted] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [captions, setCaptions] = useState(false);
+  // No playable source (e.g. a decoder that rejects the file): show the poster instead of an empty box.
+  const [failed, setFailed] = useState(false);
   const userMuted = useRef(false);
 
   // Start muted for real: React sets the property but not the attribute, and iOS checks both before allowing autoplay.
@@ -136,12 +138,14 @@ export default function TrailerPlayer() {
         onPause={() => setPlaying(false)}
       >
         <source src={SRC_MOBILE} type="video/mp4" media="(max-width: 767px)" />
-        <source src={SRC} type="video/mp4" />
+        <source src={SRC} type="video/mp4" onError={() => setFailed(true)} />
         <track kind="captions" src={CAPTIONS} srcLang="en" label="English" />
       </video>
 
+      {failed && <img src={POSTER} alt="Weatherise trailer" className="absolute inset-0 h-full w-full object-cover" />}
+
       {/* Big centered control when paused, or when the browser blocked autoplay */}
-      {!playing && (
+      {!playing && !failed && (
         <button
           type="button"
           onClick={togglePlay}

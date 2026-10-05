@@ -105,7 +105,8 @@ async function main() {
     const mp4 = join(OUT, `${reel}.mp4`);
     ff([
       "-framerate", String(FPS), "-i", join(frameDir, "%05d.jpg"), "-i", audio,
-      ...h264Args(), "-pix_fmt", "yuv420p", "-vf", "scale=1600:-2",
+      // JPEG frames are full range; phones need standard limited-range yuv420p (see video/trailer/render.mjs).
+      ...h264Args(), "-vf", "scale=1600:-2:in_range=pc:out_range=tv,format=yuv420p", "-color_range", "tv", "-colorspace", "smpte170m",
       "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-shortest", mp4,
     ]);
     // Poster: the settled final state, shown before playback and when motion is reduced.
@@ -113,7 +114,7 @@ async function main() {
     const fast = /\bh264_videotoolbox\b/.test(execFileSync("ffmpeg", ["-hide_banner", "-encoders"], { encoding: "utf8" }))
       ? ["-c:v", "h264_videotoolbox", "-b:v", "1200k", "-maxrate", "1600k"]
       : ["-c:v", "libx264", "-preset", "slow", "-crf", "26"];
-    ff(["-i", mp4, "-vf", "scale=960:-2", ...fast, "-profile:v", "main", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "112k", "-movflags", "+faststart", join(OUT, `${reel}-mobile.mp4`)]);
+    ff(["-i", mp4, "-vf", "scale=960:-2,format=yuv420p", ...fast, "-profile:v", "main", "-color_range", "tv", "-colorspace", "smpte170m", "-c:a", "aac", "-b:a", "112k", "-movflags", "+faststart", join(OUT, `${reel}-mobile.mp4`)]);
     const poster = join(frameDir, `${String(frames - Math.round(FPS * 0.6)).padStart(5, "0")}.jpg`);
     if (existsSync(poster)) ff(["-i", poster, "-vf", "scale=1600:-2", "-q:v", "4", join(OUT, `${reel}.jpg`)]);
     console.log(`${reel}: ${frames} frames, ${duration}s, ${cues.length} sound cues → ${mp4} (${((Date.now() - t0) / 1000).toFixed(0)}s)`);

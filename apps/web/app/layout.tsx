@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -36,7 +38,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="light">
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans antialiased">
+        {children}
+        {/* Vercel Web Analytics (visitors, pages, referrers, devices) + Speed Insights (real-user load times). No-ops outside Vercel. */}
+        <Analytics />
+        <SpeedInsights />
+      </body>
     </html>
   );
 }
