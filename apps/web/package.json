@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@types/leaflet": "^1.9.21",
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "leaflet": "^1.9.4",
     "leaflet-defaulticon-compatibility": "^0.1.2",
     "lucide-react": "^0.417.0",
