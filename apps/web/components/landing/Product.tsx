@@ -74,9 +74,18 @@ function FeatureSlide({
     if (v && active && v.currentSrc) v.currentTime = 0;
   }, [active]);
 
-  // Autoplay refused (e.g. iOS Low Power Mode): a tap on the Play button always may start it.
+  // Autoplay refused (e.g. iOS Low Power Mode): the Play button is a real tap, so the reel starts with sound.
   const playNow = () => {
-    videoRef.current?.play().catch(() => {});
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = false;
+    setMuted(false);
+    window.dispatchEvent(new CustomEvent(UNMUTE_EVENT, { detail: feature.video }));
+    v.play().catch(() => {
+      v.muted = true;
+      setMuted(true);
+      v.play().catch(() => {});
+    });
   };
 
   // Only one reel plays with sound at a time.

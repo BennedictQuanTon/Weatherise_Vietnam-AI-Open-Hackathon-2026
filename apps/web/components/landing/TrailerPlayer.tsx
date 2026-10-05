@@ -12,25 +12,37 @@ const CAPTIONS = "/videos/weatherise-trailer.vtt";
 
 /**
  * Trailer that plays muted while on screen and loops (see useInlineVideo for why it keeps retrying on iOS).
- * Sound comes on with the speaker button or, on desktop, the first click or key press. Touch devices stay muted
- * until the speaker is tapped: iOS pauses a video that is unmuted outside a real tap. Tap the video to pause.
+ * Desktop tries with sound first, else plays muted and turns sound on at the first click or key press.
+ * Phones and tablets autoplay muted (the only autoplay they allow); pressing Play or tapping the video starts it
+ * with sound, since a tap is a real user gesture. The speaker button mutes / unmutes. Tap the video to pause.
  */
 export default function TrailerPlayer() {
   const video = useRef<HTMLVideoElement>(null);
   const userPaused = useRef(false);
+  // Muted with the speaker button: a later Play / tap resumes without forcing sound back on.
+  const userMuted = useRef(false);
   const src = useVideoSrc(SRC, SRC_MOBILE);
-  const { playing } = useInlineVideo(video, true, userPaused);
+  const { playing } = useInlineVideo(video, true, { userPaused, soundFirst: true });
   const [muted, setMuted] = useState(true);
   const [captions, setCaptions] = useState(false);
   // No playable file at all: show the poster instead of an empty box.
   const [failed, setFailed] = useState(false);
+
+  // Keep the speaker icon in sync with whatever changed the sound (the autoplay fallback, the browser, the buttons).
+  useEffect(() => {
+    const v = video.current;
+    if (!v) return;
+    const sync = () => setMuted(v.muted);
+    v.addEventListener("volumechange", sync);
+    return () => v.removeEventListener("volumechange", sync);
+  }, []);
 
   // Desktop: the first click or key press anywhere turns the sound on (both are real user activations).
   useEffect(() => {
     if (!window.matchMedia("(pointer: fine)").matches) return;
     const unlock = () => {
       const v = video.current;
-      if (v && v.muted && !v.paused) unmute(v);
+      if (v && v.muted && !v.paused && !userMuted.current) unmute(v);
     };
     window.addEventListener("click", unlock, { once: true });
     window.addEventListener("keydown", unlock, { once: true });
@@ -64,20 +76,27 @@ export default function TrailerPlayer() {
     if (!v) return;
     if (v.muted) {
       userPaused.current = false;
+      userMuted.current = false;
       unmute(v);
     } else {
+      userMuted.current = true;
       v.muted = true;
       setMuted(true);
     }
   };
 
-  // Tap / click the video (or the Play button) to pause or resume.
+  // Tap / click the video (or the Play button) to pause or resume. Starting it this way is a real gesture, so it
+  // comes with sound (unless the visitor muted it); if the browser still refuses sound, it plays muted.
   const togglePlay = () => {
     const v = video.current;
     if (!v) return;
     if (v.paused) {
       userPaused.current = false;
-      v.play().catch(() => {});
+      if (userMuted.current) v.play().catch(() => {});
+      else unmute(v);
+    } else if (v.muted && !userMuted.current) {
+      // Playing muted (autoplay): the first tap turns the sound on instead of pausing.
+      unmute(v);
     } else {
       userPaused.current = true;
       v.pause();
