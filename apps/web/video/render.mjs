@@ -1,4 +1,4 @@
-// Renders the landing-page feature reels to public/videos/<reel>.mp4 (+ <reel>-mobile.mp4 for phones, + .jpg poster).
+// Renders the landing-page feature reels to public/videos/<reel>.mp4 (+ .jpg poster). Then run video/web-cuts.mjs for the files the site plays.
 //
 //   node video/render.mjs                # all reels
 //   node video/render.mjs ask rules      # selected reels
@@ -13,7 +13,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import puppeteer from "puppeteer-core";
-import { FROM_FRAMES, WEB_TAGS, cut } from "./web-video.mjs";
+import { FROM_FRAMES, WEB_TAGS } from "./web-video.mjs";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const OUT = join(ROOT, "..", "public", "videos");
@@ -111,11 +111,6 @@ async function main() {
       "-c:a", "aac", "-b:a", "128k", "-shortest", mp4,
     ]);
     // Poster: the settled final state, shown before playback and when motion is reduced.
-    // 960 px cut for phones (Main profile plays on every device)
-    const fast = /\bh264_videotoolbox\b/.test(execFileSync("ffmpeg", ["-hide_banner", "-encoders"], { encoding: "utf8" }))
-      ? ["-c:v", "h264_videotoolbox", "-b:v", "1200k", "-maxrate", "1600k"]
-      : ["-c:v", "libx264", "-preset", "slow", "-crf", "26"];
-    ff(["-i", mp4, "-vf", cut(960), ...fast, "-profile:v", "main", ...WEB_TAGS, "-c:a", "aac", "-b:a", "112k", join(OUT, `${reel}-mobile.mp4`)]);
     const poster = join(frameDir, `${String(frames - Math.round(FPS * 0.6)).padStart(5, "0")}.jpg`);
     if (existsSync(poster)) ff(["-i", poster, "-vf", "scale=1600:-2", "-q:v", "4", join(OUT, `${reel}.jpg`)]);
     console.log(`${reel}: ${frames} frames, ${duration}s, ${cues.length} sound cues → ${mp4} (${((Date.now() - t0) / 1000).toFixed(0)}s)`);

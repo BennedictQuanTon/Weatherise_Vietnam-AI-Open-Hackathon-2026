@@ -1,37 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
-/** Phones (≤ 767 px) get the lighter cut. Chosen after mount, so the server HTML and hydration agree. */
-export function useVideoSrc(desktop: string, mobile: string) {
-  const [chosen, setChosen] = useState<string | undefined>(undefined);
-  useEffect(() => {
-    setChosen(window.matchMedia("(max-width: 767px)").matches ? mobile : desktop);
-  }, [desktop, mobile]);
-  return chosen;
-}
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * Keeps a muted inline <video> playing while `want` is true and it is on screen.
- *
- * iOS Safari only lets muted video autoplay while it is visible, and an ancestor still at opacity 0 (a reveal
- * animation) counts as invisible: play() is refused or the video is paused right away, and Safari does not
- * resume a script-started video by itself. So rather than a single play() call, this retries once a second
- * while the video should be running. `playing` follows real playback (the "playing" event, not "play"), and
- * `blocked` turns on when the browser keeps refusing (e.g. Low Power Mode) so the UI can offer a Play button.
- * Videos have a pause control, so this autoplays even with Reduce Motion on (iOS users often enable it).
- * `soundFirst`: on desktop, try with sound once (allowed for sites the visitor has engaged with), else muted.
+ * Plays a muted inline <video> while `want` is true and at least a quarter of it is on screen; pauses it otherwise.
+ * The videos have no audio track (see video/web-cuts.mjs), the case browsers autoplay most readily, iPhone and iPad
+ * included. If a play() is still refused (iOS can pause muted video while it is fading in, or in Low Power Mode),
+ * it retries once a second while the video should be running, and reports `blocked` so the UI can offer a Play button.
  */
-export function useInlineVideo(
-  ref: React.RefObject<HTMLVideoElement>,
-  want: boolean,
-  { userPaused, soundFirst = false }: { userPaused?: React.MutableRefObject<boolean>; soundFirst?: boolean } = {},
-) {
+export function useInlineVideo(ref: React.RefObject<HTMLVideoElement>, want: boolean, userPaused?: React.MutableRefObject<boolean>) {
   const [playing, setPlaying] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const inView = useRef(false);
 
-  // Muted + inline for real: React sets the muted property but not the attribute, and iOS checks the attribute.
+  // Muted + inline for real: React 18 sets the muted property but not the attribute, and iOS checks the attribute.
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
@@ -52,13 +34,12 @@ export function useInlineVideo(
     v.addEventListener("playing", on);
     v.addEventListener("pause", off);
     v.addEventListener("ended", off);
-    v.addEventListener("emptied", off);
     const io = new IntersectionObserver(
       ([e]) => {
         inView.current = e.isIntersecting;
         if (!e.isIntersecting && !v.paused) v.pause();
       },
-      { threshold: 0.2 },
+      { threshold: 0.25 },
     );
     io.observe(v);
     return () => {
@@ -66,7 +47,6 @@ export function useInlineVideo(
       v.removeEventListener("playing", on);
       v.removeEventListener("pause", off);
       v.removeEventListener("ended", off);
-      v.removeEventListener("emptied", off);
     };
   }, [ref]);
 
@@ -78,18 +58,8 @@ export function useInlineVideo(
       return;
     }
     let refusals = 0;
-    let triedSound = !soundFirst || !window.matchMedia("(pointer: fine)").matches;
     const tick = () => {
-      if (!inView.current || userPaused?.current || document.hidden || !v.paused || v.ended || !v.currentSrc) return;
-      if (!triedSound) {
-        triedSound = true;
-        v.muted = false;
-        v.play().catch(() => {
-          v.muted = true;
-          v.play().catch(() => {});
-        });
-        return;
-      }
+      if (!inView.current || userPaused?.current || document.hidden || !v.paused || v.ended) return;
       v.play().then(
         () => (refusals = 0),
         () => {
@@ -101,7 +71,63 @@ export function useInlineVideo(
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, [ref, want, userPaused, soundFirst]);
+  }, [ref, want, userPaused]);
 
   return { playing, blocked };
+}
+
+/**
+ * Sound for a silent video: a separate <audio> element kept in step with the video's clock. It only starts from a
+ * real tap / click (the one way every browser allows sound), then follows the video: pause, resume, loop, seek.
+ */
+export function useSyncedAudio(video: React.RefObject<HTMLVideoElement>, audio: React.RefObject<HTMLAudioElement>) {
+  const [soundOn, setSoundOn] = useState(false);
+  const on = useRef(false);
+
+  useEffect(() => {
+    const v = video.current;
+    const a = audio.current;
+    if (!v || !a) return;
+    const follow = () => {
+      if (!on.current) return;
+      if (Math.abs(a.currentTime - v.currentTime) > 0.25) a.currentTime = v.currentTime;
+      if (a.paused && !v.paused) a.play().catch(() => {});
+    };
+    const hold = () => a.pause();
+    v.addEventListener("timeupdate", follow);
+    v.addEventListener("playing", follow);
+    v.addEventListener("pause", hold);
+    return () => {
+      v.removeEventListener("timeupdate", follow);
+      v.removeEventListener("playing", follow);
+      v.removeEventListener("pause", hold);
+    };
+  }, [video, audio]);
+
+  /** Call from a tap / click handler. Resolves false if the browser still refuses sound. */
+  const enable = useCallback(async () => {
+    const v = video.current;
+    const a = audio.current;
+    if (!v || !a) return false;
+    on.current = true;
+    setSoundOn(true);
+    a.currentTime = v.currentTime;
+    if (v.paused) v.play().catch(() => {});
+    try {
+      await a.play();
+      return true;
+    } catch {
+      on.current = false;
+      setSoundOn(false);
+      return false;
+    }
+  }, [video, audio]);
+
+  const disable = useCallback(() => {
+    on.current = false;
+    setSoundOn(false);
+    audio.current?.pause();
+  }, [audio]);
+
+  return { soundOn, enable, disable };
 }

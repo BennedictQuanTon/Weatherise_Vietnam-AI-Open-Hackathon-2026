@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, CloudSun, DatabaseZap, GitMerge, MessageSquareText, Play, ShieldCheck, Sparkles, Volume2, VolumeX, Workflow } from "lucide-react";
 import { DOMAINS, FEATURES, PIPELINE } from "./content";
 import { MaskHeading, Reveal, prefersReducedMotion, useStickyProgress } from "./motion";
-import { useInlineVideo, useVideoSrc } from "./useInlineVideo";
+import { useInlineVideo, useSyncedAudio } from "./useInlineVideo";
 import { MacBookPro } from "./Devices";
 import Slider from "./Slider";
 import { STACK_ICONS, type StackIcon } from "./stackIcons";
@@ -62,83 +62,63 @@ function FeatureSlide({
   onEnded: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [muted, setMuted] = useState(true);
-  const [failed, setFailed] = useState(false);
-  // 960 px cut on phones; useInlineVideo keeps the active reel playing (and retries on iOS, see there).
-  const src = useVideoSrc(feature.video, feature.video.replace(/\.mp4$/, "-mobile.mp4"));
+  const audioRef = useRef<HTMLAudioElement>(null);
+  // Silent loop files + soundtrack, made by video/web-cuts.mjs from the reel master.
+  const base = feature.video.replace(/\.mp4$/, "");
   const { blocked } = useInlineVideo(videoRef, active);
+  const { soundOn, enable, disable } = useSyncedAudio(videoRef, audioRef);
 
-  // Each time a reel becomes the active slide it starts from the top.
+  // Each time a reel becomes the active slide it starts from the top; leaving it ends its sound.
   useEffect(() => {
     const v = videoRef.current;
-    if (v && active && v.currentSrc) v.currentTime = 0;
-  }, [active]);
-
-  // Autoplay refused (e.g. iOS Low Power Mode): the Play button is a real tap, so the reel starts with sound.
-  const playNow = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.muted = false;
-    setMuted(false);
-    window.dispatchEvent(new CustomEvent(UNMUTE_EVENT, { detail: feature.video }));
-    v.play().catch(() => {
-      v.muted = true;
-      setMuted(true);
-      v.play().catch(() => {});
-    });
-  };
+    if (v && active) v.currentTime = 0;
+    if (!active) disable();
+  }, [active, disable]);
 
   // Only one reel plays with sound at a time.
   useEffect(() => {
     const onOther = (e: Event) => {
-      if ((e as CustomEvent).detail !== feature.video && videoRef.current) {
-        videoRef.current.muted = true;
-        setMuted(true);
-      }
+      if ((e as CustomEvent).detail !== feature.video) disable();
     };
     window.addEventListener(UNMUTE_EVENT, onOther);
     return () => window.removeEventListener(UNMUTE_EVENT, onOther);
-  }, [feature.video]);
+  }, [feature.video, disable]);
 
+  // Speaker or Play button: a real tap, so the reel starts (or keeps going) with sound.
+  const soundIn = () => {
+    window.dispatchEvent(new CustomEvent(UNMUTE_EVENT, { detail: feature.video }));
+    enable();
+  };
   const toggleSound = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const v = videoRef.current;
-    if (!v) return;
-    v.muted = !v.muted;
-    setMuted(v.muted);
-    if (!v.muted) {
-      window.dispatchEvent(new CustomEvent(UNMUTE_EVENT, { detail: feature.video }));
-      // A tap is a real user activation, so this also starts a reel whose autoplay was blocked.
-      v.play().catch(() => {});
-    }
+    if (soundOn) disable();
+    else soundIn();
   };
 
   return (
     <article className="relative flex h-full flex-col">
       <div className="mx-auto w-full max-w-[860px] px-[5%] pt-10 max-sm:pt-16 md:px-0 md:pt-14">
         <MacBookPro>
-          {failed ? (
-            <img src={feature.poster} alt={feature.title} className="absolute inset-0 h-full w-full object-cover" />
-          ) : (
-            <video
-              ref={videoRef}
-              className="absolute inset-0 h-full w-full object-cover"
-              src={src}
-              poster={feature.poster}
-              muted
-              playsInline
-              preload="metadata"
-              aria-label={`${feature.title}: product demo`}
-              onEnded={() => active && onEnded()}
-              onError={() => setFailed(true)}
-            />
-          )}
-          {!failed && active && blocked && (
+          <video
+            ref={videoRef}
+            className="absolute inset-0 h-full w-full object-cover"
+            poster={feature.poster}
+            muted
+            playsInline
+            preload="none"
+            aria-label={`${feature.title}: product demo`}
+            onEnded={() => active && onEnded()}
+          >
+            <source src={`${base}-loop.webm`} type="video/webm" />
+            <source src={`${base}-loop.mp4`} type="video/mp4" />
+          </video>
+          <audio ref={audioRef} src={`${base}-audio.m4a`} preload="none" />
+          {active && blocked && (
             <button
               type="button"
-              onClick={playNow}
+              onClick={soundIn}
               aria-label={`Play ${feature.title}`}
-              className="absolute left-1/2 top-1/2 z-10 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[color:var(--l-ink)] shadow-[0_10px_40px_rgba(16,16,16,0.2)] backdrop-blur focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[color:var(--l-blue)]"
+              className="absolute left-1/2 top-1/2 z-10 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[color:var(--l-ink)] shadow-[0_10px_40px_rgba(16,16,16,0.2)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[color:var(--l-blue)]"
             >
               <Play size={26} className="ml-1" aria-hidden="true" />
             </button>
@@ -149,15 +129,15 @@ function FeatureSlide({
         <h3 className="l-slide-title">{feature.title}</h3>
         <p className="l-slide-sub mt-3">{feature.body}</p>
       </div>
-      {!failed && active && (
+      {active && (
         <button
           type="button"
           onClick={toggleSound}
-          aria-label={muted ? `Turn Sound On for ${feature.title}` : `Turn Sound Off for ${feature.title}`}
+          aria-label={soundOn ? `Turn Sound Off for ${feature.title}` : `Turn Sound On for ${feature.title}`}
           className="l-arrow absolute right-5 top-5 !h-10 !w-auto gap-1.5 px-3.5 text-[14px] font-medium max-sm:right-4 max-sm:top-4 max-sm:px-3 md:right-7 md:top-7"
         >
-          {muted ? <VolumeX size={16} aria-hidden="true" /> : <Volume2 size={16} aria-hidden="true" />}
-          <span className="max-sm:sr-only">{muted ? "Sound On" : "Sound Off"}</span>
+          {soundOn ? <Volume2 size={16} aria-hidden="true" /> : <VolumeX size={16} aria-hidden="true" />}
+          <span className="max-sm:sr-only">{soundOn ? "Sound Off" : "Sound On"}</span>
         </button>
       )}
     </article>

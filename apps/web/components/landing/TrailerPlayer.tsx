@@ -2,72 +2,37 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Captions, CaptionsOff, Play, Volume2, VolumeX } from "lucide-react";
-import { useInlineVideo, useVideoSrc } from "./useInlineVideo";
+import { useInlineVideo, useSyncedAudio } from "./useInlineVideo";
 import { VideoDebug, useVideoLog } from "./VideoDebug";
 
-const SRC = "/videos/weatherise-trailer-web.mp4";
-// 720p cut for phones: lighter on mobile data, same picture.
-const SRC_MOBILE = "/videos/weatherise-trailer-mobile.mp4";
+// Silent loop (WebM first, MP4 fallback) + the soundtrack as its own file; see video/web-cuts.mjs.
+const WEBM = "/videos/weatherise-trailer-loop.webm";
+const MP4 = "/videos/weatherise-trailer-loop.mp4";
+const AUDIO = "/videos/weatherise-trailer-audio.m4a";
 const POSTER = "/videos/weatherise-trailer.jpg";
 const CAPTIONS = "/videos/weatherise-trailer.vtt";
 
 /**
- * Trailer that plays muted while on screen and loops (see useInlineVideo for why it keeps retrying on iOS).
- * Desktop tries with sound first, else plays muted and turns sound on at the first click or key press.
- * Phones and tablets autoplay muted (the only autoplay they allow); pressing Play or tapping the video starts it
- * with sound, since a tap is a real user gesture. The speaker button mutes / unmutes. Tap the video to pause.
+ * Trailer that plays silently and loops whenever it is on screen, on every device.
+ * Sound is a tap away: the speaker button, or a tap on the video, starts the soundtrack in sync.
+ * On desktop the first click or key press anywhere also turns the sound on. Once sound is on, a tap pauses / resumes.
  */
 export default function TrailerPlayer() {
   const video = useRef<HTMLVideoElement>(null);
+  const audio = useRef<HTMLAudioElement>(null);
   const userPaused = useRef(false);
-  // Muted with the speaker button: a later Play / tap resumes without forcing sound back on.
+  // Turned off with the speaker button: never switched back on by itself.
   const userMuted = useRef(false);
-  const chosen = useVideoSrc(SRC, SRC_MOBILE);
-  // After a load error the player may switch files (mobile → desktop cut); null = use the chosen one.
-  const [override, setOverride] = useState<string | null>(null);
-  const src = override ?? chosen;
-  const { playing } = useInlineVideo(video, true, { userPaused, soundFirst: true });
-  const [muted, setMuted] = useState(true);
+  const { playing } = useInlineVideo(video, true, userPaused);
+  const { soundOn, enable, disable } = useSyncedAudio(video, audio);
   const [captions, setCaptions] = useState(false);
-  // Every recovery step failed: show the poster with a Play button that retries in place (never leaves the page).
-  const [failed, setFailed] = useState(false);
-  const errors = useRef(0);
-  const { log, lines } = useVideoLog(video);
+  const { lines } = useVideoLog(video);
 
-  // Load error: 1st → try the other cut, 2nd → reload, then give up to the poster. Each step stays on the page.
-  const onError = () => {
-    const v = video.current;
-    errors.current += 1;
-    log(`error ${v?.error?.code ?? "?"} ${v?.error?.message ?? ""} on ${v?.currentSrc.split("/").pop()}`);
-    if (errors.current === 1) setOverride(src === SRC_MOBILE ? SRC : SRC_MOBILE);
-    else if (errors.current === 2) v?.load();
-    else setFailed(true);
-  };
-  const retry = () => {
-    const v = video.current;
-    if (!v) return;
-    errors.current = 0;
-    setFailed(false);
-    userPaused.current = false;
-    v.load();
-    unmute(v);
-  };
-
-  // Keep the speaker icon in sync with whatever changed the sound (the autoplay fallback, the browser, the buttons).
-  useEffect(() => {
-    const v = video.current;
-    if (!v) return;
-    const sync = () => setMuted(v.muted);
-    v.addEventListener("volumechange", sync);
-    return () => v.removeEventListener("volumechange", sync);
-  }, []);
-
-  // Desktop: the first click or key press anywhere turns the sound on (both are real user activations).
+  // Desktop: the first click or key press anywhere turns the sound on (both count as user activation).
   useEffect(() => {
     if (!window.matchMedia("(pointer: fine)").matches) return;
     const unlock = () => {
-      const v = video.current;
-      if (v && v.muted && !v.paused && !userMuted.current) unmute(v);
+      if (!userMuted.current && video.current && !video.current.paused) enable();
     };
     window.addEventListener("click", unlock, { once: true });
     window.addEventListener("keydown", unlock, { once: true });
@@ -75,57 +40,40 @@ export default function TrailerPlayer() {
       window.removeEventListener("click", unlock);
       window.removeEventListener("keydown", unlock);
     };
-  }, []);
+  }, [enable]);
 
   useEffect(() => {
     const t = video.current?.textTracks?.[0];
     if (t) t.mode = captions ? "showing" : "hidden";
-  }, [captions, src]);
-
-  // Unmute without ever leaving the video stuck: if the browser refuses, fall back to muted playback.
-  const unmute = (v: HTMLVideoElement) => {
-    v.muted = false;
-    setMuted(false);
-    if (v.paused) {
-      v.play().catch(() => {
-        v.muted = true;
-        setMuted(true);
-        v.play().catch(() => {});
-      });
-    }
-  };
+  }, [captions]);
 
   const toggleSound = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const v = video.current;
-    if (!v) return;
-    if (v.muted) {
-      userPaused.current = false;
-      userMuted.current = false;
-      unmute(v);
-    } else {
+    if (soundOn) {
       userMuted.current = true;
-      v.muted = true;
-      setMuted(true);
+      disable();
+    } else {
+      userMuted.current = false;
+      userPaused.current = false;
+      enable();
     }
   };
 
-  // Tap / click the video (or the Play button) to pause or resume. Starting it this way is a real gesture, so it
-  // comes with sound (unless the visitor muted it); if the browser still refuses sound, it plays muted.
-  const togglePlay = () => {
+  // Play button / tap on a paused video: resume, with sound unless the visitor turned it off.
+  const resume = () => {
+    userPaused.current = false;
+    if (!userMuted.current) enable();
+    else video.current?.play().catch(() => {});
+  };
+  // Tap on the playing video: the first tap brings the sound in; after that it pauses.
+  const onVideoTap = (e: React.MouseEvent) => {
+    e.stopPropagation();
     const v = video.current;
     if (!v) return;
-    if (v.paused) {
-      userPaused.current = false;
-      if (userMuted.current) v.play().catch(() => {});
-      else unmute(v);
-    } else if (v.muted && !userMuted.current) {
-      // Playing muted (autoplay): the first tap turns the sound on instead of pausing.
-      unmute(v);
-    } else {
-      userPaused.current = true;
-      v.pause();
-    }
+    if (v.paused) return resume();
+    if (!soundOn && !userMuted.current) return void enable();
+    userPaused.current = true;
+    v.pause();
   };
 
   return (
@@ -133,74 +81,63 @@ export default function TrailerPlayer() {
       <video
         ref={video}
         className="block aspect-video w-full cursor-pointer bg-white"
-        src={src}
         poster={POSTER}
-        playsInline
         muted
         loop
-        preload="metadata"
-        aria-label="Weatherise trailer, 60 seconds, with voiceover"
-        onClick={togglePlay}
-        onError={onError}
+        playsInline
+        preload="none"
+        aria-label="Weatherise trailer, 60 seconds"
+        onClick={onVideoTap}
       >
+        <source src={WEBM} type="video/webm" />
+        <source src={MP4} type="video/mp4" />
         <track kind="captions" src={CAPTIONS} srcLang="en" label="English" />
       </video>
+      <audio ref={audio} src={AUDIO} preload="none" />
 
-      {failed && <img src={POSTER} alt="Weatherise trailer" className="absolute inset-0 h-full w-full object-cover" />}
-
-      {/* Play button whenever the video is not actually moving (loading, paused by the visitor, or autoplay refused).
-          A tap always may start playback, even when the browser blocks autoplay. */}
+      {/* Shown only while the video is not moving (paused, or the browser refused to start it) */}
       {!playing && (
-        failed ? (
-          <button
-            type="button"
-            onClick={retry}
-            aria-label="Play Trailer"
-            className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[color:var(--l-ink)] shadow-[0_10px_40px_rgba(16,16,16,0.2)] md:h-20 md:w-20"
-          >
-            <Play size={30} className="ml-1" aria-hidden="true" />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={togglePlay}
-            aria-label="Play Trailer"
-            className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[color:var(--l-ink)] shadow-[0_10px_40px_rgba(16,16,16,0.2)] transition-transform duration-300 hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[color:var(--l-blue)] md:h-20 md:w-20"
-          >
-            <Play size={30} className="ml-1" aria-hidden="true" />
-          </button>
-        )
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            resume();
+          }}
+          aria-label="Play Trailer"
+          className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[color:var(--l-ink)] shadow-[0_10px_40px_rgba(16,16,16,0.2)] transition-transform duration-300 hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[color:var(--l-blue)] md:h-20 md:w-20"
+        >
+          <Play size={30} className="ml-1" aria-hidden="true" />
+        </button>
       )}
 
-      {/* Top-right: captions + sound, icon only (solid backgrounds: iOS can stop drawing a video under backdrop-filter) */}
-      {!failed && (
-        <div className="absolute right-3 top-3 flex gap-2 md:right-6 md:top-6">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setCaptions((c) => !c);
-            }}
-            aria-pressed={captions}
-            aria-label={captions ? "Turn Captions Off" : "Turn Captions On"}
-            className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--l-blue)] ${
-              captions ? "bg-[color:var(--l-ink)] text-white" : "bg-white text-[color:var(--l-ink)] shadow-[0_4px_16px_rgba(16,16,16,0.15)]"
-            }`}
-          >
-            {captions ? <Captions size={19} aria-hidden="true" /> : <CaptionsOff size={19} aria-hidden="true" />}
-          </button>
-          <button
-            type="button"
-            onClick={toggleSound}
-            aria-label={muted ? "Turn Sound On" : "Turn Sound Off"}
-            className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--l-blue)] ${
-              muted ? "bg-[color:var(--l-blue)] text-white shadow-[0_8px_24px_rgba(0,136,255,0.35)]" : "bg-white text-[color:var(--l-ink)] shadow-[0_4px_16px_rgba(16,16,16,0.15)]"
-            }`}
-          >
-            {muted ? <VolumeX size={19} aria-hidden="true" /> : <Volume2 size={19} aria-hidden="true" />}
-          </button>
-        </div>
-      )}
+      {/* Top-right: captions + sound, icon only */}
+      <div className="absolute right-3 top-3 flex gap-2 md:right-6 md:top-6">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setCaptions((c) => !c);
+          }}
+          aria-pressed={captions}
+          aria-label={captions ? "Turn Captions Off" : "Turn Captions On"}
+          className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--l-blue)] ${
+            captions ? "bg-[color:var(--l-ink)] text-white" : "bg-white text-[color:var(--l-ink)] shadow-[0_4px_16px_rgba(16,16,16,0.15)]"
+          }`}
+        >
+          {captions ? <Captions size={19} aria-hidden="true" /> : <CaptionsOff size={19} aria-hidden="true" />}
+        </button>
+        <button
+          type="button"
+          onClick={toggleSound}
+          aria-label={soundOn ? "Turn Sound Off" : "Turn Sound On"}
+          className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--l-blue)] ${
+            soundOn ? "bg-white text-[color:var(--l-ink)] shadow-[0_4px_16px_rgba(16,16,16,0.15)]" : "bg-[color:var(--l-blue)] text-white shadow-[0_8px_24px_rgba(0,136,255,0.35)]"
+          }`}
+        >
+          {soundOn ? <Volume2 size={19} aria-hidden="true" /> : <VolumeX size={19} aria-hidden="true" />}
+        </button>
+      </div>
+
       <VideoDebug video={video} lines={lines} />
     </div>
   );

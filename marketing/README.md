@@ -114,7 +114,8 @@ node video/trailer/render.mjs --fps 60 --subs          # captioned cut
 python video/poster/qr.py
 node video/poster/capture-ui.mjs                       # only when the answer screen changes; then re-check the pins in poster-back.html
 node video/poster/render.mjs                           # front + back, vertical + horizontal
-node video/render.mjs                                  # all four reels + mobile cuts (or: node video/render.mjs consensus)
+node video/render.mjs                                  # all four reels (or: node video/render.mjs consensus)
+node video/web-cuts.mjs                                # what the site plays: silent -loop.webm/.mp4 + -audio.m4a per video
 
 # Copy everything here
 bash ../../marketing/sync.sh
