@@ -18,12 +18,13 @@ echo "Trailer"
 copy "$SRC/videos/weatherise-trailer.mp4"           "$OUT/trailer/weatherise-trailer-1080p60.mp4"
 copy "$SRC/videos/weatherise-trailer-captioned.mp4" "$OUT/trailer/weatherise-trailer-captioned-1080p60.mp4"
 copy "$SRC/videos/weatherise-trailer-web.mp4"       "$OUT/trailer/weatherise-trailer-web.mp4"
+copy "$SRC/videos/weatherise-trailer-mobile.mp4"    "$OUT/trailer/weatherise-trailer-mobile.mp4"
 copy "$SRC/videos/weatherise-trailer.srt"           "$OUT/trailer/weatherise-trailer.en.srt"
 copy "$SRC/videos/weatherise-trailer.vtt"           "$OUT/trailer/weatherise-trailer.en.vtt"
 copy "$SRC/videos/weatherise-trailer.jpg"           "$OUT/trailer/weatherise-trailer-thumbnail.jpg"
 
 echo "Posters"
-for f in vertical horizontal; do
+for f in vertical horizontal vertical-back horizontal-back; do
   copy "$SRC/posters/weatherise-poster-$f.png" "$OUT/posters/weatherise-poster-$f.png"
   copy "$SRC/posters/weatherise-poster-$f.jpg" "$OUT/posters/weatherise-poster-$f.jpg"
 done

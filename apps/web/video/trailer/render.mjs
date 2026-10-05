@@ -4,7 +4,7 @@
 //   2. node video/trailer/capture-ui.mjs        (app on :3000) → ui/*.jpg
 //   3. node video/trailer/render.mjs [--fps 60] [--preview] [--subs]
 //
-// Output: public/videos/weatherise-trailer.mp4 + .srt + .jpg poster.
+// Output: public/videos/weatherise-trailer.mp4 + .srt + .vtt + .jpg poster, and the site cuts -web.mp4 / -mobile.mp4.
 // --subs burns the captions into the frames instead → public/videos/weatherise-trailer-captioned.mp4 (for muted autoplay on social).
 
 import { execFileSync } from "node:child_process";
@@ -87,4 +87,21 @@ ff([
 ]);
 const poster = join(FRAMES, `${String(Math.round((tl.lines.find((l) => l.id === "r2").end + 2.2) * FPS)).padStart(5, "0")}.jpg`);
 if (existsSync(poster) && !SUBS) ff(["-i", poster, "-q:v", "3", join(OUT, "weatherise-trailer.jpg")]);
+
+// Site cuts from the master: -web (1600 px, desktop & iPad) and -mobile (720p, Main profile, phones), plus WebVTT captions.
+if (!SUBS) {
+  const cut = (width, kbps, profile, aKbps, name) => {
+    const enc = /\bh264_videotoolbox\b/.test(execFileSync("ffmpeg", ["-hide_banner", "-encoders"], { encoding: "utf8" }))
+      ? ["-c:v", "h264_videotoolbox", "-b:v", `${kbps}k`, "-maxrate", `${Math.round(kbps * 1.35)}k`, "-profile:v", profile]
+      : ["-c:v", "libx264", "-preset", "slow", "-b:v", `${kbps}k`, "-maxrate", `${Math.round(kbps * 1.35)}k`, "-bufsize", `${kbps * 2}k`, "-profile:v", profile];
+    ff(["-i", mp4, "-map", "0:v", "-map", "0:a", "-vf", `scale=${width}:-2,fps=30`, ...enc, "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", `${aKbps}k`, "-ac", "2", "-movflags", "+faststart", join(OUT, `${name}.mp4`)]);
+  };
+  cut(1600, 3000, "high", 160, "weatherise-trailer-web");
+  cut(1280, 1600, "main", 128, "weatherise-trailer-mobile");
+  const vtt = srt.trim().split(/\n\s*\n/).map((b) => {
+    const [, time, ...text] = b.split("\n");
+    return `${time.replaceAll(",", ".")} line:85%\n${text.join("\n")}`;
+  });
+  writeFileSync(join(OUT, "weatherise-trailer.vtt"), `WEBVTT\n\n${vtt.join("\n\n")}\n`);
+}
 console.log(`done → ${mp4} (${((Date.now() - t0) / 1000).toFixed(0)}s)`);

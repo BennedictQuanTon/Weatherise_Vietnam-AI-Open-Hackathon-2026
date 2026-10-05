@@ -8,12 +8,13 @@ marketing/
 ├── trailer/
 │   ├── weatherise-trailer-1080p60.mp4            master · clean picture, soft English subtitles
 │   ├── weatherise-trailer-captioned-1080p60.mp4  captions burned in · for muted autoplay
-│   ├── weatherise-trailer-web.mp4                lightweight cut used on the website
+│   ├── weatherise-trailer-web.mp4                cut used on the website (desktop, iPad)
+│   ├── weatherise-trailer-mobile.mp4             720p cut the website serves to phones
 │   ├── weatherise-trailer.en.srt / .en.vtt       English subtitles
 │   └── weatherise-trailer-thumbnail.jpg          cover frame
 ├── posters/
-│   ├── weatherise-poster-vertical.png / .jpg     3600 × 5400 · 2:3
-│   └── weatherise-poster-horizontal.png / .jpg   3840 × 2160 · 16:9
+│   ├── weatherise-poster-vertical(-back).png / .jpg     3600 × 5400 · 2:3, front + back
+│   └── weatherise-poster-horizontal(-back).png / .jpg   3840 × 2160 · 16:9, front + back
 ├── reels/
 │   └── weatherise-reel-{ask,consensus,rules,replan}.mp4 / .jpg
 └── sync.sh                                        copies fresh renders in here
@@ -28,6 +29,7 @@ marketing/
 | **Trailer, master** | 1920 × 1080 · 60 fps · H.264 · AAC 256k · −14 LUFS · 60 s · ~75 MB | YouTube, pitch decks, demo-day screens. The English subtitle track can be switched on or off. |
 | **Trailer, captioned** | Same as the master, with captions drawn in the trailer's own style | LinkedIn, Facebook, X: feeds autoplay without sound. |
 | **Trailer, web** | 1600 × 900 · 30 fps · 3 Mbps · ~11 MB | Websites, email, Slack, anywhere file size matters. |
+| **Trailer, mobile** | 1280 × 720 · 30 fps · H.264 Main · ~7 MB | Messaging apps (Zalo, Messenger, WhatsApp) and phones on mobile data; plays on every device. |
 | **Subtitles** | `.srt` (17 cues) · `.vtt` (positioned at 85% height) | Upload the `.srt` to YouTube or LinkedIn; the `.vtt` is for HTML `<video>`. |
 | **Poster, vertical** | 3600 × 5400 PNG (12 × 18 in at 300 dpi) · JPG for screens | Print, booth standee, Instagram portrait (crop to 4:5). Its two QR codes open the live demo and the GitHub repo. |
 | **Poster, horizontal** | 3840 × 2160 PNG (4K) · JPG for screens | Slides, event screens, LinkedIn or X banner, README hero. Same QR codes, sized to scan from a 1080p screen. |
@@ -39,6 +41,8 @@ The four reels:
 - **consensus**: seven sources fused into one forecast, with 94% agreement.
 - **rules**: every answer checked against real safety rules.
 - **replan**: when Friday turns stormy, the plan moves indoors.
+
+**Double-sided print:** every poster has a back (`-back`), the same size as its front. The front sells the product, with the stats and QR codes. The back is "Inside Weatherise": the real answer screen with callouts on seven features, the 4.8 s pipeline, how the team built it, the team and mentors, and the stack. Print front and back on the same sheet; flip on the long edge for the vertical poster and on the short edge for the horizontal.
 
 ## Trailer Script (60 s)
 
@@ -103,16 +107,14 @@ From `apps/web/`, with the dev server running on :3000 for the UI captures:
 # Trailer (≈ 3.5 min per 60 fps render)
 <kokoro-venv>/bin/python video/trailer/voiceover.py   # voice + timeline (Kokoro-82M, offline)
 node video/trailer/capture-ui.mjs                      # real app screenshots
-node video/trailer/render.mjs --fps 60                 # master + .srt + thumbnail
+node video/trailer/render.mjs --fps 60                 # master + web & mobile cuts + .srt/.vtt + thumbnail
 node video/trailer/render.mjs --fps 60 --subs          # captioned cut
-ffmpeg -i public/videos/weatherise-trailer.mp4 -map 0:v -map 0:a -vf "scale=1600:-2,fps=30" \
-  -c:v h264_videotoolbox -b:v 3M -maxrate 4M -profile:v high -pix_fmt yuv420p \
-  -c:a aac -b:a 160k -movflags +faststart public/videos/weatherise-trailer-web.mp4
 
 # Posters and reels (qr.py only when a link changes; needs: pip install segno)
 python video/poster/qr.py
-node video/poster/render.mjs
-node video/render.mjs                                  # all four reels (or: node video/render.mjs consensus)
+node video/poster/capture-ui.mjs                       # only when the answer screen changes; then re-check the pins in poster-back.html
+node video/poster/render.mjs                           # front + back, vertical + horizontal
+node video/render.mjs                                  # all four reels + mobile cuts (or: node video/render.mjs consensus)
 
 # Copy everything here
 bash ../../marketing/sync.sh

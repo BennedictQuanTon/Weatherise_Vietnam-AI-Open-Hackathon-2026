@@ -5,13 +5,16 @@ import { Captions, CaptionsOff, Play, Volume2, VolumeX } from "lucide-react";
 import { prefersReducedMotion } from "./motion";
 
 const SRC = "/videos/weatherise-trailer-web.mp4";
+// 720p cut for phones: lighter on mobile data, same picture.
+const SRC_MOBILE = "/videos/weatherise-trailer-mobile.mp4";
 const POSTER = "/videos/weatherise-trailer.jpg";
 const CAPTIONS = "/videos/weatherise-trailer.vtt";
 
 /**
- * Trailer that plays when it scrolls into view.
- * Browsers only allow sound after the visitor interacts with the page, so it first tries to play
- * with sound; if blocked it plays muted (blue speaker button) and unmutes on the first click/key. Loops; captions off by default.
+ * Trailer that plays (muted) when it scrolls into view, the one autoplay every browser allows.
+ * On desktop it first tries with sound. Sound comes on with the speaker button or, on desktop, the first click or key press.
+ * Touch devices are left muted until the speaker button is tapped: iOS pauses a video that is unmuted outside a real tap,
+ * and the touch that starts a scroll does not count as one. If autoplay is blocked (e.g. iOS Low Power Mode), the Play button shows.
  */
 export default function TrailerPlayer() {
   const wrap = useRef<HTMLDivElement>(null);
@@ -21,16 +24,26 @@ export default function TrailerPlayer() {
   const [captions, setCaptions] = useState(false);
   const userMuted = useRef(false);
 
-  // Play in view (try with sound first), pause out of view.
+  // Start muted for real: React sets the property but not the attribute, and iOS checks both before allowing autoplay.
+  useEffect(() => {
+    const v = video.current;
+    if (!v) return;
+    v.muted = true;
+    v.defaultMuted = true;
+    v.setAttribute("muted", "");
+  }, []);
+
+  // Play in view, pause out of view.
   useEffect(() => {
     const v = video.current;
     const el = wrap.current;
     if (!v || !el) return;
+    const finePointer = window.matchMedia("(pointer: fine)").matches;
     const io = new IntersectionObserver(
       async ([e]) => {
-        if (e.isIntersecting && e.intersectionRatio >= 0.55) {
-          if (prefersReducedMotion()) return;
-          if (!userMuted.current) {
+        if (e.isIntersecting && e.intersectionRatio >= 0.5) {
+          if (prefersReducedMotion() || !v.paused) return;
+          if (finePointer && !userMuted.current) {
             v.muted = false;
             try {
               await v.play();
@@ -46,25 +59,23 @@ export default function TrailerPlayer() {
           v.pause();
         }
       },
-      { threshold: [0, 0.55] },
+      { threshold: [0, 0.5] },
     );
     io.observe(el);
     return () => io.disconnect();
   }, []);
 
-  // First interaction anywhere on the page unlocks sound (if the visitor hasn't muted it themselves).
+  // Desktop: the first click or key press anywhere turns the sound on (both are real user activations, unlike pointerdown on touch).
   useEffect(() => {
+    if (!window.matchMedia("(pointer: fine)").matches) return;
     const unlock = () => {
       const v = video.current;
-      if (v && v.muted && !userMuted.current && !v.paused) {
-        v.muted = false;
-        setMuted(false);
-      }
+      if (v && v.muted && !userMuted.current && !v.paused) unmute(v);
     };
-    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("click", unlock, { once: true });
     window.addEventListener("keydown", unlock, { once: true });
     return () => {
-      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("click", unlock);
       window.removeEventListener("keydown", unlock);
     };
   }, []);
@@ -75,16 +86,33 @@ export default function TrailerPlayer() {
     if (t) t.mode = captions ? "showing" : "hidden";
   }, [captions]);
 
+  // Unmute without ever leaving the video stuck: if the browser pauses it, resume; if it refuses, fall back to muted.
+  const unmute = (v: HTMLVideoElement) => {
+    v.muted = false;
+    setMuted(false);
+    if (v.paused) {
+      v.play().catch(() => {
+        v.muted = true;
+        setMuted(true);
+        v.play().catch(() => {});
+      });
+    }
+  };
+
   const toggleSound = (e: React.MouseEvent) => {
     e.stopPropagation();
     const v = video.current;
     if (!v) return;
-    v.muted = !v.muted;
-    userMuted.current = v.muted;
-    setMuted(v.muted);
-    if (v.paused) v.play().catch(() => {});
+    if (v.muted) {
+      userMuted.current = false;
+      unmute(v);
+    } else {
+      v.muted = true;
+      userMuted.current = true;
+      setMuted(true);
+    }
   };
-  // Click the video to pause / resume.
+  // Tap / click the video to pause or resume.
   const togglePlay = () => {
     const v = video.current;
     if (!v) return;
@@ -97,7 +125,6 @@ export default function TrailerPlayer() {
       <video
         ref={video}
         className="block aspect-video w-full cursor-pointer bg-white"
-        src={SRC}
         poster={POSTER}
         playsInline
         muted
@@ -108,23 +135,25 @@ export default function TrailerPlayer() {
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
       >
+        <source src={SRC_MOBILE} type="video/mp4" media="(max-width: 767px)" />
+        <source src={SRC} type="video/mp4" />
         <track kind="captions" src={CAPTIONS} srcLang="en" label="English" />
       </video>
 
-      {/* Big centered control when paused / ended */}
+      {/* Big centered control when paused, or when the browser blocked autoplay */}
       {!playing && (
         <button
           type="button"
           onClick={togglePlay}
           aria-label="Play Trailer"
-          className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[color:var(--l-ink)] shadow-[0_10px_40px_rgba(16,16,16,0.2)] backdrop-blur transition-transform duration-300 hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[color:var(--l-blue)]"
+          className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[color:var(--l-ink)] shadow-[0_10px_40px_rgba(16,16,16,0.2)] backdrop-blur transition-transform duration-300 hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[color:var(--l-blue)] max-sm:h-16 max-sm:w-16"
         >
           <Play size={30} className="ml-1" aria-hidden="true" />
         </button>
       )}
 
       {/* Top-right: captions + sound, icon only */}
-      <div className="absolute right-4 top-4 flex gap-2 md:right-6 md:top-6">
+      <div className="absolute right-4 top-4 flex gap-2 max-sm:right-3 max-sm:top-3 md:right-6 md:top-6">
         <button
           type="button"
           onClick={(e) => {
