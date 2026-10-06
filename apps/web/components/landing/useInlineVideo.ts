@@ -77,8 +77,14 @@ export function useInlineVideo(ref: React.RefObject<HTMLVideoElement>, want: boo
 }
 
 /**
- * Sound for a silent video: a separate <audio> element kept in step with the video's clock. It only starts from a
- * real tap / click (the one way every browser allows sound), then follows the video: pause, resume, loop, seek.
+ * Sound for a silent video: a separate <audio> element, started only from a real tap / click (the one way every
+ * browser allows sound).
+ *
+ * The soundtrack is the master clock and is never seeked while it plays: on phones the two clocks drift and the
+ * audio needs network time to resume, so re-seeking the audio to match the video caused an endless loop of audible
+ * jumps (28 re-seeks in 20 s on a 400 ms connection). Instead the silent video follows the audio: small drift is
+ * absorbed by nudging the video's playback rate (±3–10 %), large drift by one invisible video seek. The soundtrack is
+ * preloaded once the video starts, so sound comes in without a wait, and it loops along with the video.
  */
 export function useSyncedAudio(video: React.RefObject<HTMLVideoElement>, audio: React.RefObject<HTMLAudioElement>) {
   const [soundOn, setSoundOn] = useState(false);
@@ -88,19 +94,62 @@ export function useSyncedAudio(video: React.RefObject<HTMLVideoElement>, audio: 
     const v = video.current;
     const a = audio.current;
     if (!v || !a) return;
-    const follow = () => {
-      if (!on.current) return;
-      if (Math.abs(a.currentTime - v.currentTime) > 0.25) a.currentTime = v.currentTime;
-      if (a.paused && !v.paused) a.play().catch(() => {});
+    a.loop = v.loop;
+
+    // Fetch the soundtrack as soon as the video actually plays, so a tap has nothing to wait for.
+    const preload = () => {
+      if (a.preload !== "auto") {
+        a.preload = "auto";
+        a.load();
+      }
     };
-    const hold = () => a.pause();
-    v.addEventListener("timeupdate", follow);
-    v.addEventListener("playing", follow);
+    // Video resumed (after a pause, or back on screen): bring the sound back from where the picture is.
+    const resume = () => {
+      preload();
+      if (on.current && a.paused) {
+        a.currentTime = v.currentTime;
+        a.play().catch(() => {});
+      }
+    };
+    const hold = () => {
+      a.pause();
+      v.playbackRate = 1;
+    };
+    // Audio just started (or restarted): line the picture up with it once.
+    const align = () => {
+      if (on.current && Math.abs(v.currentTime - a.currentTime) > 0.08) v.currentTime = a.currentTime;
+    };
+    v.addEventListener("playing", resume);
     v.addEventListener("pause", hold);
+    a.addEventListener("playing", align);
+
+    // Keep the picture on the sound's clock.
+    const id = window.setInterval(() => {
+      if (!on.current || a.paused || v.paused || v.seeking) return;
+      let drift = v.currentTime - a.currentTime; // > 0: picture ahead of the sound
+      const dur = a.duration || v.duration;
+      if (v.loop && dur) {
+        if (drift > dur / 2) drift -= dur;
+        else if (drift < -dur / 2) drift += dur;
+      }
+      const off = Math.abs(drift);
+      if (off > 0.5) {
+        v.currentTime = a.currentTime;
+        v.playbackRate = 1;
+      } else if (off > 0.04) {
+        // Catch up fast while far off (±10 %), gently when close (±3 %): both are invisible on a silent picture.
+        const nudge = off > 0.15 ? 0.1 : 0.03;
+        v.playbackRate = drift > 0 ? 1 - nudge : 1 + nudge;
+      } else if (v.playbackRate !== 1) {
+        v.playbackRate = 1;
+      }
+    }, 200);
+
     return () => {
-      v.removeEventListener("timeupdate", follow);
-      v.removeEventListener("playing", follow);
+      window.clearInterval(id);
+      v.removeEventListener("playing", resume);
       v.removeEventListener("pause", hold);
+      a.removeEventListener("playing", align);
     };
   }, [video, audio]);
 
@@ -127,7 +176,8 @@ export function useSyncedAudio(video: React.RefObject<HTMLVideoElement>, audio: 
     on.current = false;
     setSoundOn(false);
     audio.current?.pause();
-  }, [audio]);
+    if (video.current) video.current.playbackRate = 1;
+  }, [video, audio]);
 
   return { soundOn, enable, disable };
 }
